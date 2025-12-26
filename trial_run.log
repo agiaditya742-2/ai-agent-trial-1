@@ -1,0 +1,37 @@
+--- First run ---
+Initializing AI Agent...
+Loading agents...
+  - Successfully loaded agent: chat_agent
+VoiceAgent initialized (simulation mode).
+  - Successfully loaded agent: voice_agent
+  - Successfully loaded agent: tool_agent
+  - Successfully loaded agent: task_agent
+All agents loaded.
+Hello! I am your AI assistant. How can I help you today?
+You: [TaskAgent] Processing input: 'remind me to check the persistent memory'
+[TaskAgent] Added task: 'check the persistent memory'
+Agent: AI: Okay, I've added 'check the persistent memory' to your to-do list.
+You: [TaskAgent] Processing input: 'what are my tasks'
+[TaskAgent] Listing tasks.
+Agent: AI: Here are your current tasks:
+- check the persistent memory
+You: Goodbye! Shutting down.
+Saving memory...
+Memory saved.
+\n--- Second run ---
+Initializing AI Agent...
+Loading agents...
+  - Successfully loaded agent: chat_agent
+VoiceAgent initialized (simulation mode).
+  - Successfully loaded agent: voice_agent
+  - Successfully loaded agent: tool_agent
+  - Successfully loaded agent: task_agent
+All agents loaded.
+Hello! I am your AI assistant. How can I help you today?
+You: [TaskAgent] Processing input: 'what are my tasks'
+[TaskAgent] Listing tasks.
+Agent: AI: Here are your current tasks:
+- check the persistent memory
+You: Goodbye! Shutting down.
+Saving memory...
+Memory saved.

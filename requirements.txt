@@ -1,0 +1,6 @@
+# This file lists the Python packages required by the AI Agent project.
+# You can install all of these dependencies by running:
+# pip install -r requirements.txt
+
+PyYAML==6.0.1
+requests==2.31.0
