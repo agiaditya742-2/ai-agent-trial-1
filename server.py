@@ -59,6 +59,18 @@ def history():
 
     return jsonify({"history": agent.memory.get_conversation_history()})
 
+# --- API Route for Clearing Memory ---
+@app.route('/clear_memory', methods=['POST'])
+def clear_memory():
+    """
+    Clears the agent's short-term conversation history.
+    """
+    if not agent:
+        return jsonify({"error": "The AI agent is not available."}), 500
+
+    agent.memory.clear_short_term_memory()
+    return jsonify({"status": "success", "message": "Conversation history cleared."})
+
 # --- Route for Serving the Frontend ---
 @app.route('/')
 def serve_webapp():

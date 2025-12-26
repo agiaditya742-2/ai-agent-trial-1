@@ -32,15 +32,37 @@ body {
     text-align: center;
     border-bottom: 1px solid #ddd;
 }
+.chat-header {
+    position: relative; /* Add this to make the absolute positioning of the button relative to the header */
+    background: linear-gradient(90deg, #4a90e2, #50e3c2);
+    color: white;
+    padding: 20px;
+    text-align: center;
+    border-bottom: 1px solid #ddd;
+}
 .chat-header h1 {
     margin: 0;
     font-size: 1.8em;
     font-weight: 700;
 }
-.chat-header p {
-    margin: 5px 0 0;
-    font-size: 1em;
-    font-weight: 300;
+.header-buttons {
+    position: absolute;
+    right: 20px;
+    top: 50%;
+    transform: translateY(-50%);
+}
+#clear-btn {
+    background: #ff4d4d;
+    color: white;
+    border: none;
+    padding: 8px 15px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: background 0.3s;
+}
+#clear-btn:hover {
+    background: #cc0000;
 }
 
 /* --- Chat Box (Message Area) --- */
@@ -116,4 +138,35 @@ body {
 }
 #message-form button:hover {
     background-color: #357abd;
+}
+
+#mic-btn {
+    background: none;
+    border: none;
+    padding: 10px;
+    cursor: pointer;
+    color: #555;
+}
+#mic-btn.is-listening {
+    color: #ff4d4d;
+}
+
+/* --- Typing Indicator Animation --- */
+.typing-indicator span {
+    display: inline-block;
+    animation: bounce 1.4s infinite;
+}
+.typing-indicator span:nth-child(2) {
+    animation-delay: 0.2s;
+}
+.typing-indicator span:nth-child(3) {
+    animation-delay: 0.4s;
+}
+@keyframes bounce {
+    0%, 80%, 100% {
+        transform: translateY(0);
+    }
+    40% {
+        transform: translateY(-8px);
+    }
 }

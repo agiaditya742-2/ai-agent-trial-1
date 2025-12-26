@@ -11,7 +11,9 @@
     <div class="chat-container">
         <header class="chat-header">
             <h1>AI Agent Assistant</h1>
-            <p>Your personal AI, ready to help.</p>
+            <div class="header-buttons">
+                <button id="clear-btn" title="Clear conversation history">Clear</button>
+            </div>
         </header>
         <div class="chat-box" id="chat-box">
             <!-- Chat messages will be dynamically inserted here -->
@@ -21,8 +23,11 @@
         </div>
         <footer class="chat-input-area">
             <form id="message-form">
-                <input type="text" id="message-input" placeholder="Type your message here..." autocomplete="off">
-                <button type="submit">Send</button>
+                <button type="button" id="mic-btn" title="Activate voice input">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="24" height="24"><path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zm5.4-3a5.4 5.4 0 0 1-10.8 0H5a7 7 0 0 0 6 6.92V21h2v-3.08A7 7 0 0 0 19 11h-1.6z"/></svg>
+                </button>
+                <input type="text" id="message-input" placeholder="Type your message here, or use the microphone..." autocomplete="off">
+                <button type="submit" title="Send message">Send</button>
             </form>
         </footer>
     </div>

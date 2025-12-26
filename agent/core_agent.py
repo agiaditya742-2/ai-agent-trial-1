@@ -8,16 +8,11 @@ from agent.llm_client import LLMClient
 
 class CoreAgent:
     """
-    The central decision-making unit of the AI Agent system.
-
-    This upgraded class uses an LLM to understand user intent, route tasks,
-    and generate conversational responses, making it much more intelligent.
+    The central decision-making unit of the AI Agent system, now with a
+    reflection step for long-term learning.
     """
 
     def __init__(self, config_path='config/settings.yaml'):
-        """
-        Initializes the CoreAgent with all its necessary components.
-        """
         self.config = self._load_config(config_path)
         self.memory = Memory(self.config['memory_store_paths'])
         self.personality = Personality(self.config['personality_rules'])
@@ -25,68 +20,83 @@ class CoreAgent:
         self.llm_client = LLMClient(api_key=self.config.get('ai_models', {}).get('openai', {}).get('api_key'))
 
     def _load_config(self, config_path):
-        """
-        Loads the system configuration from a YAML file.
-        """
         with open(config_path, 'r') as f:
             return yaml.safe_load(f)
 
     def handle_request(self, user_input):
-        """
-        Processes user input using an LLM for routing and response.
-
-        Args:
-            user_input (str): The input from the user.
-
-        Returns:
-            str: The response from the appropriate agent.
-        """
-        # 1. Store user input in memory
+        # 1. Store user input
         self.memory.add_to_short_term({"role": "user", "content": user_input})
 
-        # 2. Use LLM to determine intent and select an agent
+        # 2. Determine intent and get a response
         agent_name = self._determine_intent(user_input)
+        response = self._execute_agent(agent_name, user_input)
 
-        # 3. Execute the appropriate agent
+        # 3. Store agent's response
+        self.memory.add_to_short_term({"role": "assistant", "content": response})
+
+        # 4. Perform reflection to learn from the interaction
+        self._reflect_on_conversation()
+
+        # 5. Save all memory and apply personality
+        self.memory.save_memory()
+        return self.personality.apply_style(response)
+
+    def _execute_agent(self, agent_name, user_input):
         agent = self.agent_manager.get_agent(agent_name)
         if agent_name == 'chat_agent':
             history = self.memory.get_conversation_history()
-            response = agent.execute(user_input, conversation_history=history)
+            return agent.execute(user_input, conversation_history=history)
         elif agent:
-            response = agent.execute(user_input)
+            return agent.execute(user_input)
         else:
-            # Fallback to the LLM if no specific agent is found
-            response = self.llm_client.generate_response(user_input)
-
-        # 4. Store the agent's response
-        self.memory.add_to_short_term({"role": "assistant", "content": response})
-        self.memory.save_memory()
-
-        # 5. Apply personality
-        styled_response = self.personality.apply_style(response)
-
-        return styled_response
+            return self.llm_client.generate_response(user_input)
 
     def _determine_intent(self, user_input):
-        """
-        Uses the LLM to determine the user's intent and select the best agent.
-        """
-        # Create a prompt for the LLM to choose the best agent
-        prompt = f"""
-        Given the user's request: "{user_input}"
-        Which of the following agents is best suited to handle this?
-        - 'tool_agent': For requests that need tools, like checking the weather or time.
-        - 'task_agent': For managing a to-do list, like adding or listing tasks.
-        - 'chat_agent': For general conversation, jokes, or questions.
-
-        Please respond with only the name of the agent (e.g., 'tool_agent').
-        """
-
-        # In a real scenario, we would use the LLM's response.
-        # For this simulation, we'll keep the keyword logic to avoid API costs.
         if "weather" in user_input.lower() or "time" in user_input.lower() or "date" in user_input.lower():
             return "tool_agent"
         elif "remind me" in user_input.lower() or "task" in user_input.lower():
             return "task_agent"
         else:
             return "chat_agent"
+
+    def _reflect_on_conversation(self):
+        """
+        Analyzes the recent conversation to extract key facts for long-term memory.
+        """
+        print("[CoreAgent] Reflecting on the conversation...")
+        history = self.memory.get_conversation_history()
+
+        # Don't reflect on very short conversations
+        if len(history) < 2:
+            print("[CoreAgent] Not enough history to reflect.")
+            return
+
+        # Create a prompt for the LLM to extract key facts
+        prompt = f"""
+        Based on the following conversation history, what are the key facts to remember about the user?
+        Facts could include their name, preferences, goals, or any other important information.
+        Format the facts as a JSON list of strings. For example: ["The user's name is John.", "The user likes dogs."]
+        If there are no new key facts, respond with an empty list [].
+
+        Conversation:
+        {history}
+        """
+
+        # Use the LLM to extract facts (in simulation mode, this will be a placeholder)
+        extracted_facts = self.llm_client.generate_response(prompt)
+
+        try:
+            # In a real scenario, we'd parse the JSON from the LLM.
+            # For simulation, we'll check for a specific phrase.
+            if "my name is" in str(history).lower():
+                user_name = "User" # Default
+                for msg in history:
+                    if "my name is" in msg.get('content', '').lower():
+                        user_name = msg['content'].lower().split("my name is")[-1].strip().capitalize()
+
+                fact = f"The user's name is {user_name}."
+                print(f"[CoreAgent] Learned a new fact: {fact}")
+                self.memory.add_to_long_term({"fact": fact})
+
+        except Exception as e:
+            print(f"Error during reflection: {e}")

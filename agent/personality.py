@@ -2,80 +2,82 @@
 
 class Personality:
     """
-    Manages the agent's communication style and response rules.
+    Manages the agent's communication style based on dynamic profiles.
 
-    This class uses a set of rules defined in the configuration to shape the
-    agent's responses. It can provide standard replies (like greetings) and
-    apply stylistic modifications to any given text to make it sound more
-    like the agent's defined character.
+    This class loads a set of personality profiles from the configuration
+    and uses the active profile to shape the agent's responses. This allows
+    the agent's tone (e.g., friendly, formal) to be changed easily.
     """
 
     def __init__(self, rules):
         """
-        Initializes the Personality class with a set of rules.
+        Initializes the Personality class with a set of rules and profiles.
 
         Args:
-            rules (dict): A dictionary containing personality rules, such as
-                          standard responses and stylistic prefixes.
-                          Example:
-                          {
-                              "standard_responses": {
-                                  "greeting": "Hello! How can I help you?",
-                                  "farewell": "Goodbye! Have a great day."
-                              },
-                              "style_prefix": "As an AI assistant, I can say: "
-                          }
+            rules (dict): A dictionary containing personality rules, including
+                          the active profile and a dictionary of profiles.
         """
-        self.rules = rules
+        self.active_profile_name = rules.get("active_profile", "friendly")
+        self.profiles = rules.get("profiles", {})
+        self.active_profile = self.profiles.get(self.active_profile_name, {})
 
     def get_response(self, response_type):
         """
-        Retrieves a standard response from the personality rules.
+        Retrieves a standard response from the active personality profile.
 
         Args:
-            response_type (str): The type of response to retrieve (e.g., "greeting").
+            response_type (str): The type of response (e.g., "greeting").
 
         Returns:
-            str: The predefined response, or a default message if not found.
+            str: The predefined response, or a default message.
         """
-        return self.rules.get("standard_responses", {}).get(response_type, "...")
+        return self.active_profile.get("standard_responses", {}).get(response_type, "...")
 
     def apply_style(self, text):
         """
-        Applies the agent's personality style to a given text.
-
-        For example, it might add a prefix to every response to make it sound
-        more formal or robotic.
+        Applies the active personality's style to a given text.
 
         Args:
             text (str): The text to be styled.
 
         Returns:
-            str: The text with the personality style applied.
+            str: The styled text.
         """
-        prefix = self.rules.get("style_prefix", "")
+        prefix = self.active_profile.get("style_prefix", "")
         return f"{prefix}{text}"
 
 if __name__ == '__main__':
     # Example usage for testing the Personality class
 
-    # Define some sample personality rules
     sample_rules = {
-        "standard_responses": {
-            "greeting": "Greetings, human. I am ready to assist.",
-            "farewell": "Mission complete. Powering down."
-        },
-        "style_prefix": "AI says: "
+        "active_profile": "formal",
+        "profiles": {
+            "friendly": {
+                "style_prefix": "Hey, AI here: ",
+                "standard_responses": {"greeting": "What's up?"}
+            },
+            "formal": {
+                "style_prefix": "AI Unit 734: ",
+                "standard_responses": {"greeting": "Greetings."}
+            }
+        }
     }
 
-    # Create an instance of the Personality class
+    # 1. Initialize with the sample rules
     personality = Personality(sample_rules)
+    print(f"Active Profile: {personality.active_profile_name}")
 
-    # Test getting standard responses
+    # 2. Test getting a standard response from the active (formal) profile
     print(f"Greeting: {personality.get_response('greeting')}")
-    print(f"Farewell: {personality.get_response('farewell')}")
 
-    # Test applying style to a custom message
-    custom_message = "The sky is blue."
-    styled_message = personality.apply_style(custom_message)
+    # 3. Test applying the style of the active (formal) profile
+    styled_message = personality.apply_style("The operation was a success.")
     print(f"Styled Message: {styled_message}")
+
+    # 4. Switch to the friendly profile to test dynamic loading
+    sample_rules['active_profile'] = 'friendly'
+    friendly_personality = Personality(sample_rules)
+    print(f"\nActive Profile: {friendly_personality.active_profile_name}")
+    print(f"Greeting: {friendly_personality.get_response('greeting')}")
+    friendly_styled = friendly_personality.apply_style("Let's get this party started.")
+    print(f"Styled Message: {friendly_styled}")

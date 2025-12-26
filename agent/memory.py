@@ -87,6 +87,24 @@ class Memory:
         """
         return self.long_term_memory
 
+    def add_to_long_term(self, data):
+        """
+        Adds an entry to the long-term memory.
+
+        Args:
+            data (dict): The data to be added (e.g., a key fact or summary).
+        """
+        self.long_term_memory.append(data)
+
+    def clear_short_term_memory(self):
+        """
+        Clears the short-term memory and the corresponding file.
+        """
+        self.short_term_memory = []
+        # Overwrite the file with an empty list
+        self._save_json(self.short_term_path, [])
+        print("Short-term memory cleared.")
+
     def get_conversation_history(self, num_messages=10):
         """
         Retrieves the most recent messages from short-term memory.

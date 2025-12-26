@@ -32,15 +32,24 @@ memory_store_paths:
 
 # --- Personality Rules ---
 # Controls the agent's communication style and standard responses.
-# This allows for easy customization of how the agent interacts with the user.
 personality_rules:
-  standard_responses:
-    greeting: "Hello! I am your AI assistant. How can I help you today?"
-    farewell: "Goodbye! Shutting down."
-    confirmation: "Understood."
-  # A prefix added to every response to give the agent a consistent voice.
-  # Can be left empty for a more natural style.
-  style_prefix: "AI: "
+  # The active personality profile. Can be "friendly", "formal", etc.
+  active_profile: "friendly"
+
+  profiles:
+    friendly:
+      style_prefix: "AI Assistant: "
+      standard_responses:
+        greeting: "Hey there! I'm your friendly AI assistant. What can I do for you today?"
+        farewell: "Catch you later! Have a great day."
+        confirmation: "Got it!"
+
+    formal:
+      style_prefix: "AI Protocol Unit: "
+      standard_responses:
+        greeting: "Greetings. I am the AI Protocol Unit, ready to assist. Please state your query."
+        farewell: "Mission complete. Terminating session."
+        confirmation: "Acknowledged."
 
 # --- AI Model Placeholders ---
 # This section is for configuring connections to external AI models.
