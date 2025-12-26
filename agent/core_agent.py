@@ -48,11 +48,14 @@ class CoreAgent:
         agent_name = self._determine_intent(user_input)
 
         # 3. Execute the appropriate agent
-        if agent_name in self.agent_manager.agents:
-            agent = self.agent_manager.get_agent(agent_name)
+        agent = self.agent_manager.get_agent(agent_name)
+        if agent_name == 'chat_agent':
+            history = self.memory.get_conversation_history()
+            response = agent.execute(user_input, conversation_history=history)
+        elif agent:
             response = agent.execute(user_input)
         else:
-            # Default to conversational response using the LLM
+            # Fallback to the LLM if no specific agent is found
             response = self.llm_client.generate_response(user_input)
 
         # 4. Store the agent's response

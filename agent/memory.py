@@ -87,6 +87,18 @@ class Memory:
         """
         return self.long_term_memory
 
+    def get_conversation_history(self, num_messages=10):
+        """
+        Retrieves the most recent messages from short-term memory.
+
+        Args:
+            num_messages (int): The number of recent messages to retrieve.
+
+        Returns:
+            list: A list of the most recent messages.
+        """
+        return self.short_term_memory[-num_messages:]
+
     def consolidate_memory(self):
         """
         Moves information from short-term to long-term memory.

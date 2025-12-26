@@ -37,9 +37,13 @@ class ToolAgent:
 
         # Simplified routing logic to select the right tool
         if "weather" in user_input.lower():
-            # Example: "what is the weather in London?"
-            city = user_input.lower().split("in ")[-1]
-            return self.api_tools.get_weather(city)
+            # A more robust way to find the city name
+            parts = user_input.lower().split(" in ")
+            if len(parts) > 1:
+                city = parts[1].strip().replace("?", "")
+                return self.api_tools.get_weather(city)
+            else:
+                return "Please specify a city, for example: 'what is the weather in New York?'"
 
         elif "news" in user_input.lower():
             # Example: "get today's news"
@@ -55,49 +59,3 @@ class ToolAgent:
 
         else:
             return "I don't have a tool for that task."
-
-if __name__ == '__main__':
-    # Example usage for testing the ToolAgent directly
-
-    # We need to create dummy tool modules and classes for this test to run
-    import os
-    if not os.path.exists('tools'):
-        os.makedirs('tools')
-
-    # Dummy ApiTools
-    with open('tools/api_tools.py', 'w') as f:
-        f.write("""
-class ApiTools:
-    def get_weather(self, city):
-        return f"Fetching weather for {city}... It is sunny."
-    def get_news(self):
-        return "Fetching news... AI agents are taking over!"
-""")
-
-    # Dummy SystemTools
-    with open('tools/system_tools.py', 'w') as f:
-        f.write("""
-import datetime
-class SystemTools:
-    def get_current_time(self):
-        return f"The current time is {datetime.datetime.now().strftime('%H:%M:%S')}."
-    def get_current_date(self):
-        return f"Today's date is {datetime.datetime.now().strftime('%Y-%m-%d')}."
-""")
-    with open('tools/__init__.py', 'w') as f:
-        pass
-
-    # Now we can initialize and test the ToolAgent
-    tool_agent = ToolAgent()
-
-    # Test cases
-    print(f"Request: 'what is the weather in new york?'\nResponse: {tool_agent.execute('what is the weather in new york?')}\n")
-    print(f"Request: 'get the latest news'\nResponse: {tool_agent.execute('get the latest news')}\n")
-    print(f"Request: 'what time is it now?'\nResponse: {tool_agent.execute('what time is it now?')}\n")
-    print(f"Request: 'tell me the date'\nResponse: {tool_agent.execute('tell me the date')}\n")
-    print(f"Request: 'tell me a story'\nResponse: {tool_agent.execute('tell me a story')}\n")
-
-    # Clean up dummy files
-    os.remove('tools/api_tools.py')
-    os.remove('tools/system_tools.py')
-    os.remove('tools/__init__.py')

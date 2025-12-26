@@ -4,26 +4,48 @@ document.addEventListener('DOMContentLoaded', () => {
     const messageForm = document.getElementById('message-form');
     const messageInput = document.getElementById('message-input');
     const chatBox = document.getElementById('chat-box');
+    const apiBaseUrl = 'http://127.0.0.1:5000';
+
+    /**
+     * Fetches and displays the conversation history on page load.
+     */
+    async function loadHistory() {
+        try {
+            const response = await fetch(`${apiBaseUrl}/history`);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const data = await response.json();
+            // Clear the initial "Hello" message
+            chatBox.innerHTML = '';
+            if (data.history && data.history.length > 0) {
+                data.history.forEach(message => {
+                    const sender = message.role === 'user' ? 'user' : 'agent';
+                    addMessage(message.content, sender);
+                });
+            } else {
+                addMessage("Hello! I am your AI assistant. How can I assist you today?", 'agent');
+            }
+        } catch (error) {
+            console.error('Error loading history:', error);
+            // Don't clear the box, just show the error in console
+        }
+    }
 
     messageForm.addEventListener('submit', async (event) => {
-        event.preventDefault(); // Prevent the form from reloading the page
+        event.preventDefault();
 
         const userMessage = messageInput.value.trim();
-        if (userMessage === '') {
-            return; // Don't send empty messages
-        }
+        if (userMessage === '') return;
 
-        // 1. Display the user's message in the chat box
         addMessage(userMessage, 'user');
-        messageInput.value = ''; // Clear the input field
+        messageInput.value = '';
+        showTypingIndicator();
 
         try {
-            // 2. Send the message to the backend server
-            const response = await fetch('http://127.0.0.1:5000/chat', {
+            const response = await fetch(`${apiBaseUrl}/chat`, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ message: userMessage }),
             });
 
@@ -32,33 +54,41 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             const data = await response.json();
-            const agentMessage = data.response;
-
-            // 3. Display the agent's response
-            addMessage(agentMessage, 'agent');
+            removeTypingIndicator();
+            addMessage(data.response, 'agent');
 
         } catch (error) {
             console.error('Error communicating with the agent:', error);
-            addMessage('Sorry, I am having trouble connecting to the server. Please try again later.', 'agent');
+            removeTypingIndicator();
+            addMessage('Sorry, I am having trouble connecting. Please try again.', 'agent');
         }
     });
 
-    /**
-     * Adds a new message to the chat box.
-     * @param {string} text - The message text to display.
-     * @param {string} sender - 'user' or 'agent'.
-     */
     function addMessage(text, sender) {
         const messageElement = document.createElement('div');
         messageElement.classList.add('message', `${sender}-message`);
-
         const p = document.createElement('p');
         p.textContent = text;
         messageElement.appendChild(p);
-
         chatBox.appendChild(messageElement);
-
-        // Scroll to the bottom of the chat box to show the latest message
         chatBox.scrollTop = chatBox.scrollHeight;
     }
+
+    function showTypingIndicator() {
+        const typingIndicator = document.createElement('div');
+        typingIndicator.classList.add('message', 'agent-message', 'typing-indicator');
+        typingIndicator.innerHTML = '<p><span>.</span><span>.</span><span>.</span></p>';
+        chatBox.appendChild(typingIndicator);
+        chatBox.scrollTop = chatBox.scrollHeight;
+    }
+
+    function removeTypingIndicator() {
+        const typingIndicator = chatBox.querySelector('.typing-indicator');
+        if (typingIndicator) {
+            chatBox.removeChild(typingIndicator);
+        }
+    }
+
+    // Load the chat history when the page is ready
+    loadHistory();
 });

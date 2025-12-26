@@ -48,6 +48,17 @@ def chat():
         print(f"An error occurred while handling a request: {e}")
         return jsonify({"error": "An internal error occurred."}), 500
 
+# --- API Route for Getting History ---
+@app.route('/history', methods=['GET'])
+def history():
+    """
+    Provides the current conversation history.
+    """
+    if not agent:
+        return jsonify({"error": "The AI agent is not available."}), 500
+
+    return jsonify({"history": agent.memory.get_conversation_history()})
+
 # --- Route for Serving the Frontend ---
 @app.route('/')
 def serve_webapp():

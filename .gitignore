@@ -20,3 +20,6 @@ Thumbs.db
 
 # Log files
 *.log
+
+# Memory files
+memory_store/*.json
