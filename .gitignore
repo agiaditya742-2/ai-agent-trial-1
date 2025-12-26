@@ -17,3 +17,6 @@ env/
 # OS-specific files
 .DS_Store
 Thumbs.db
+
+# Log files
+*.log

@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Agent Interface</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="chat-container">
+        <header class="chat-header">
+            <h1>AI Agent Assistant</h1>
+            <p>Your personal AI, ready to help.</p>
+        </header>
+        <div class="chat-box" id="chat-box">
+            <!-- Chat messages will be dynamically inserted here -->
+            <div class="message agent-message">
+                <p>Hello! I am your AI assistant. How can I assist you today?</p>
+            </div>
+        </div>
+        <footer class="chat-input-area">
+            <form id="message-form">
+                <input type="text" id="message-input" placeholder="Type your message here..." autocomplete="off">
+                <button type="submit">Send</button>
+            </form>
+        </footer>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>

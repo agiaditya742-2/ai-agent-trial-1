@@ -94,5 +94,13 @@
     {
         "role": "assistant",
         "content": "Here are your current tasks:\n- check the persistent memory"
+    },
+    {
+        "role": "user",
+        "content": "hello"
+    },
+    {
+        "role": "assistant",
+        "content": "Hello! It's great to chat with you. How can I help?"
     }
 ]

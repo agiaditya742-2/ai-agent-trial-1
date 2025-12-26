@@ -104,20 +104,28 @@ Follow these steps to get the AI Agent running on your local machine.
 
 ### Usage
 
-1.  **Run the agent from the command line:**
+The agent can now be run as a full-stack web application.
+
+1.  **Start the backend server:**
     ```sh
-    python main.py
+    python server.py
+    ```
+    The server will start and the `CoreAgent` will initialize.
+
+2.  **Open the web interface:**
+    Open your web browser and navigate to:
+    ```
+    http://127.0.0.1:5000
     ```
 
-2.  **Interact with the agent:**
-    Once the agent is running, you can type your requests directly into the console. Try the following commands:
-    -   `hello`
-    -   `tell me a joke`
-    -   `what time is it?`
-    -   `what is the weather in Paris?`
-    -   `remind me to call the doctor`
-    -   `what are my tasks`
-    -   `exit` (to end the session)
+3.  **Interact with the agent:**
+    You can now chat with the agent through the web interface. Try the following commands:
+    -   `Hello`
+    -   `Tell me a joke`
+    -   `What time is it?`
+    -   `What is the weather in Paris?`
+    -   `Remind me to call the doctor`
+    -   `What are my tasks?`
 
 ## 7. Future Roadmap
 
