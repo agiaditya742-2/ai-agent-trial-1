@@ -1,136 +1,128 @@
 # agent/autonomous_agent.py
 
-"""
-The Autonomous Agent component.
-
-This agent is designed to execute long-running tasks by creating a plan,
-using tools to execute the plan, and managing its own state. It's the key
-to enabling the AI to work by itself on complex goals.
-"""
-
 import time
 import logging
-from threading import Thread, Event
+from threading import Event
 from typing import Dict, Any, List
 
-# A simulated toolset for the autonomous agent
-from tools.internet_tools import search_web, read_website_content
-
 # Configure logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - [%(levelname)s] - (AutonomousAgent) - %(message)s')
 
 class AutonomousAgent:
     """
     An agent capable of autonomous operation to achieve a specific goal.
-
-    This agent operates in a separate thread, allowing it to run in the background
-    without blocking the main application (e.g., the web server).
+    It creates a plan, executes it step-by-step, and can even attempt to
+    self-correct if it fails. It operates in a separate thread.
     """
 
-    def __init__(self, goal: str):
+    def __init__(self, goal: str, core_agent):
         self.goal: str = goal
+        self.core_agent = core_agent  # Direct access to the core agent's tools
         self.plan: List[str] = []
         self.task_log: List[Dict[str, Any]] = []
         self.is_running: bool = False
         self.stop_event = Event()
-        self.thread: Thread = None
+
+    def run(self):
+        """The main entry point for the agent's execution thread."""
+        self.is_running = True
+        self._log_entry("Start", f"Autonomous agent activated. Goal: {self.goal}")
+
+        try:
+            self._create_plan()
+
+            for i, step in enumerate(self.plan):
+                if self.stop_event.is_set():
+                    self._log_entry("Halted", "Agent was stopped by user command.")
+                    break
+
+                self._execute_step(i + 1, step)
+            else: # This 'else' belongs to the 'for' loop, executing only if the loop completes without a break
+                self._log_entry("Finish", "Autonomous agent has completed its plan.")
+
+        except Exception as e:
+            logging.error(f"A critical error occurred in the autonomous agent: {e}")
+            self._log_entry("Critical Failure", f"Agent stopped due to an unexpected error: {e}", "error")
+
+        finally:
+            self.is_running = False
 
     def _create_plan(self):
         """
-        Simulates the creation of a multi-step plan to achieve the goal.
-
-        In a real LLM-powered agent, this would involve a complex prompt to a language model
-        asking it to decompose the goal into a series of actionable steps.
+        Creates a multi-step plan to achieve the goal using an LLM.
         """
-        logging.info(f"Creating a plan for goal: '{self.goal}'")
-        # Simulate a plan based on a generic research goal
-        self.plan = [
-            f"search_web: 'what is {self.goal}'",
-            "read_website_content: from first search result",
-            f"search_web: 'how to implement {self.goal}'",
-            "read_website_content: from second search result",
-            "synthesize_findings: 'create a summary of the key findings'"
-        ]
-        self.task_log.append({"step": "Plan Creation", "details": f"Plan created with {len(self.plan)} steps."})
+        self._log_entry("Planning", "Formulating a plan to achieve the goal.")
 
-    def _execute_step(self, step: str):
+        # In a real system, this prompt would be much more complex.
+        # For simulation, we create a plan based on keywords.
+        if "research" in self.goal.lower():
+            topic = self.goal.lower().replace("research", "").strip()
+            self.plan = [
+                f"search for benefits of {topic}",
+                f"read website from the first result",
+                f"summarize findings about {topic}"
+            ]
+        elif "organize project" in self.goal.lower():
+            self.plan = [
+                "list files in Documents",
+                "create file 'project_summary.txt' with content 'This is a summary of the new project.'",
+                "add task 'review project_summary.txt'"
+            ]
+        else:
+            self.plan = [f"search for '{self.goal}'"]
+
+        self._log_entry("Plan Created", f"Plan formulated with {len(self.plan)} steps.", "success")
+
+    def _execute_step(self, step_num: int, step_description: str):
         """
-        Executes a single step from the plan.
-
-        This method parses the step to determine which tool to use and with what arguments.
-        It's a simplified simulation of a tool-calling architecture.
+        Executes a single step from the plan and attempts to self-correct on failure.
         """
-        if self.stop_event.is_set():
-            logging.info("Stop event received, halting execution.")
-            return
+        self._log_entry(f"Step {step_num}", f"Executing: {step_description}")
 
-        logging.info(f"Executing step: {step}")
-        parts = step.split(": ", 1)
-        tool_name = parts[0]
-        args = parts[1] if len(parts) > 1 else ""
+        max_retries = 2
+        for i in range(max_retries):
+            try:
+                # Use the CoreAgent's tool agent to execute the action
+                tool_agent = self.core_agent.agent_manager.get_agent('tool_agent')
+                if not tool_agent:
+                    raise RuntimeError("ToolAgent not available.")
 
-        result = "No result."
-        try:
-            if tool_name == "search_web":
-                result = search_web(args)
-            elif tool_name == "read_website_content":
-                # For this simulation, we'll just grab a URL from the previous step's log
-                previous_search_results = self.task_log[-1].get("result", "{}")
-                import json
-                try:
-                    urls = [res['url'] for res in json.loads(previous_search_results).get('results', [])]
-                    if urls:
-                        result = read_website_content(urls[0])
-                    else:
-                        result = "Could not find a URL from the previous step."
-                except (json.JSONDecodeError, IndexError):
-                    result = "Error processing previous search results to find a URL."
-            elif tool_name == "synthesize_findings":
-                # This is a high-level task that would typically involve another LLM call
-                result = f"Simulated synthesis: Based on the research, the key findings about '{self.goal}' have been compiled into a summary."
-            else:
-                result = f"Unknown tool: {tool_name}"
+                result = tool_agent.execute(step_description)
 
-            self.task_log.append({"step": step, "result": result, "status": "Completed"})
-            time.sleep(2)  # Simulate time taken for the task
-        except Exception as e:
-            logging.error(f"Error executing step '{step}': {e}")
-            self.task_log.append({"step": step, "error": str(e), "status": "Failed"})
+                if result.get("status") in ["error", "failed"]:
+                    raise RuntimeError(result.get("result"))
 
-    def _run_loop(self):
-        """The main loop for the agent's execution thread."""
-        self.is_running = True
-        self.task_log.append({"step": "Start", "details": f"Autonomous agent started for goal: {self.goal}"})
+                self._log_entry(f"Step {step_num} Result", str(result), "success")
+                time.sleep(2) # Simulate work
+                return # Step was successful
 
-        self._create_plan()
+            except Exception as e:
+                logging.warning(f"Step {step_num} failed on attempt {i + 1}/{max_retries}. Error: {e}")
+                self._log_entry(f"Step {step_num} Failure", f"Attempt {i + 1} failed: {e}", "warning")
 
-        for step in self.plan:
-            if self.stop_event.is_set():
-                break
-            self._execute_step(step)
+                if i < max_retries - 1:
+                    self._self_correct(step_description, str(e))
+                else:
+                    self._log_entry(f"Step {step_num} Failure", "Maximum retries reached. Aborting plan.", "error")
+                    self.stop() # Abort the entire plan
 
-        self.is_running = False
-        self.task_log.append({"step": "Finish", "details": "Autonomous agent has completed its goal."})
-        logging.info(f"Autonomous agent for goal '{self.goal}' has finished.")
-
-    def start(self):
-        """Starts the autonomous agent in a new thread."""
-        if not self.is_running:
-            logging.info("Starting autonomous agent...")
-            self.stop_event.clear()
-            self.thread = Thread(target=self._run_loop)
-            self.thread.start()
+    def _self_correct(self, failed_step: str, error_message: str):
+        """
+        Simulates an LLM-based self-correction step.
+        """
+        self._log_entry("Self-Correction", f"Attempting to correct for error: {error_message}")
+        time.sleep(1) # Simulate thinking
+        # In a real system, this would involve another LLM call to create a new plan or modify the step.
+        # For simulation, we'll just log that we tried.
+        self._log_entry("Self-Correction", "Formulated a corrective action (simulated).", "info")
 
     def stop(self):
         """Stops the agent's execution."""
         if self.is_running:
             logging.info("Stopping autonomous agent...")
             self.stop_event.set()
-            if self.thread:
-                self.thread.join()  # Wait for the thread to finish
-            self.is_running = False
 
-    def get_status(self):
+    def get_status(self) -> Dict[str, Any]:
         """Returns the current status and log of the agent."""
         return {
             "goal": self.goal,
@@ -139,35 +131,8 @@ class AutonomousAgent:
             "task_log": self.task_log
         }
 
-if __name__ == '__main__':
-    print("--- Testing Autonomous Agent ---")
-
-    # Define a goal for the agent
-    agent_goal = "Quantum Computing"
-    autonomous_agent = AutonomousAgent(goal=agent_goal)
-
-    # Start the agent
-    autonomous_agent.start()
-
-    # Monitor its progress for a few seconds
-    for i in range(10):
-        if not autonomous_agent.is_running:
-            break
-        status = autonomous_agent.get_status()
-        print(f"\n--- Status Update (Second {i+1}) ---")
-        print(f"Is Running: {status['is_running']}")
-        print("Task Log:")
-        for log in status['task_log']:
-            print(f"  - {log}")
-        time.sleep(1)
-
-    # Stop the agent if it's still running
-    if autonomous_agent.is_running:
-        autonomous_agent.stop()
-
-    print("\n--- Final Status ---")
-    final_status = autonomous_agent.get_status()
-    import json
-    print(json.dumps(final_status, indent=2))
-
-    print("\n--- Autonomous Agent Test Complete ---")
+    def _log_entry(self, step: str, details: str, level: str = "info"):
+        """Adds a structured entry to the task log."""
+        log_item = {"step": step, "details": details, "timestamp": time.time(), "level": level}
+        self.task_log.append(log_item)
+        logging.info(f"({step}) - {details}")

@@ -13,6 +13,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const modalBody = document.getElementById('modal-body');
     const closeModalBtn = document.querySelector('.close-btn');
     const listeningIndicator = document.getElementById('listening-indicator');
+    const autonomousToggle = document.getElementById('autonomous-toggle');
+    const deepThinkingCheckbox = document.getElementById('deep-thinking-checkbox');
 
     // --- State Management ---
     let wakeWord = localStorage.getItem('agentWakeWord') || 'agent';
@@ -145,6 +147,52 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     });
+
+    // --- Autonomous & Deep Thinking Logic ---
+    const handleAutonomousModeToggle = async () => {
+        if (autonomousToggle.checked) {
+            const goal = prompt("Please provide the high-level goal for the autonomous agent:");
+            if (goal) {
+                try {
+                    await fetch('/autonomous/start', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ goal }),
+                    });
+                    appendMessage(`Autonomous mode initiated with goal: "${goal}"`, 'ai');
+                } catch (error) {
+                    console.error('Error starting autonomous mode:', error);
+                    appendMessage('There was an error starting autonomous mode.', 'ai');
+                    autonomousToggle.checked = false;
+                }
+            } else {
+                autonomousToggle.checked = false; // User cancelled prompt
+            }
+        } else {
+            try {
+                await fetch('/autonomous/stop', { method: 'POST' });
+                appendMessage('Autonomous mode has been stopped.', 'ai');
+            } catch (error) {
+                console.error('Error stopping autonomous mode:', error);
+            }
+        }
+    };
+
+    const handleDeepThinkingToggle = async () => {
+        try {
+            await fetch('/deep_thinking', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ enabled: deepThinkingCheckbox.checked }),
+            });
+        } catch (error) {
+            console.error('Error toggling deep thinking mode:', error);
+        }
+    };
+
+    autonomousToggle.addEventListener('change', handleAutonomousModeToggle);
+    deepThinkingCheckbox.addEventListener('change', handleDeepThinkingToggle);
+
 
     // --- Wake Word & Speech Recognition ---
     if (SpeechRecognition) {

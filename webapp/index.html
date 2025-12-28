@@ -16,6 +16,13 @@
         <div class="chat-header">
             <h2>AI Agent Assistant</h2>
             <div class="header-controls">
+                <div class="autonomous-mode">
+                    <label for="autonomous-toggle">Autonomous Mode</label>
+                    <label class="switch">
+                        <input type="checkbox" id="autonomous-toggle">
+                        <span class="slider round"></span>
+                    </label>
+                </div>
                 <!-- Three Dots Menu -->
                 <div class="menu-container">
                     <button id="menu-btn"><i class="fas fa-ellipsis-v"></i></button>
@@ -38,6 +45,10 @@
             </button>
             <input type="file" id="file-input" style="display: none;"/>
             <input type="text" id="user-input" placeholder="Type your message or say your wake word...">
+            <div class="deep-thinking-area">
+                <input type="checkbox" id="deep-thinking-checkbox" title="Enable Deep Thinking for this message">
+                <label for="deep-thinking-checkbox">Deep Think</label>
+            </div>
             <button id="send-btn">
                 <i class="fas fa-paper-plane"></i>
             </button>

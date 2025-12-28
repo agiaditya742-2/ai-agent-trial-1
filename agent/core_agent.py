@@ -2,6 +2,7 @@
 
 import yaml
 import logging
+import threading
 from agent.agent_manager import AgentManager
 from agent.memory import Memory
 from agent.personality import Personality
@@ -147,14 +148,21 @@ class CoreAgent:
         return {"status": "success", "deep_thinking_mode": self.deep_thinking_mode}
 
     def start_autonomous_mode(self, goal: str):
-        """Starts the autonomous agent with a specific goal."""
+        """
+        Starts the autonomous agent in a background thread with a specific goal.
+        """
         if self.autonomous_agent and self.autonomous_agent.is_running:
+            logging.warning("Attempted to start autonomous agent while it was already running.")
             return {"status": "error", "message": "Autonomous agent is already running."}
 
-        self.autonomous_agent = AutonomousAgent(goal=goal)
-        self.autonomous_agent.start()
-        logging.info(f"Autonomous agent started for goal: {goal}")
-        return {"status": "success", "message": f"Autonomous agent started for goal: {goal}"}
+        logging.info(f"Initiating autonomous agent for goal: {goal}")
+        self.autonomous_agent = AutonomousAgent(goal=goal, core_agent=self)
+
+        # Run the agent in a separate thread to avoid blocking the server
+        agent_thread = threading.Thread(target=self.autonomous_agent.run)
+        agent_thread.start()
+
+        return {"status": "success", "message": f"Autonomous agent has been dispatched to work on: {goal}"}
 
     def stop_autonomous_mode(self):
         """Stops the autonomous agent."""

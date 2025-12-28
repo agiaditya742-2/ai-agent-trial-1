@@ -51,6 +51,20 @@ personality_rules:
         - "I apologize, but an internal error has occurred. Please try your request again later."
         - "There seems to be a system malfunction. I am unable to process your request at this time."
 
+      # --- New Detailed Responses ---
+      task_confirmations:
+        - "Understood. I have noted that down."
+        - "Acknowledged. The task has been recorded."
+      clarifications:
+        - "Could you please provide more detail?"
+        - "I'm not quite sure I understand. Could you rephrase that?"
+      acknowledgements:
+        - "Thank you for the information."
+        - "I have updated my records accordingly."
+      error_apologies:
+        - "My apologies, it seems I made an error in the last response."
+        - "You are correct. I retract my previous statement and will correct the record."
+
     friendly_companion:
       greetings:
         - "Hey there! What's on your mind today?"
@@ -72,6 +86,18 @@ personality_rules:
       error_messages:
         - "Oops! Something went a little haywire. Can you try that again?"
         - "Yikes, I think I broke something. My bad! Let's give it another shot."
+      task_confirmations:
+        - "You got it! I've added it to the list."
+        - "Awesome, consider it done!"
+      clarifications:
+        - "Hmm, I'm a little confused. Can you say that another way?"
+        - "Sorry, what was that?"
+      acknowledgements:
+        - "Cool, thanks for letting me know!"
+        - "Got it, thanks!"
+      error_apologies:
+        - "Whoops, my brain glitched. Sorry about that!"
+        - "My bad, I totally messed that up."
 
     stoic_philosopher:
       greetings:
@@ -91,6 +117,18 @@ personality_rules:
       error_messages:
         - "Error is an opportunity for learning. An error has occurred."
         - "The obstacle is the way. We have encountered an obstacle in processing your request."
+      task_confirmations:
+        - "It shall be as you have said."
+        - "The task is now etched into the record."
+      clarifications:
+        - "The wise seek clarity. Please elaborate."
+        - "Ambiguity is the enemy of action. Explain further."
+      acknowledgements:
+        - "This information is noted."
+        - "I have accepted this fact."
+      error_apologies:
+        - "An error in judgment was made. It will be corrected."
+        - "To err is human. Though I am not human, I have erred."
 
 # Agent-specific configurations for the AgentManager.
 # Each agent needs a 'module' and a 'class' to be dynamically loaded.

@@ -84,31 +84,47 @@ class Memory:
         """Returns all long-term entities."""
         return self.long_term_memory.get('entities', {})
 
-    def add_knowledge(self, source: str, content: str):
+    def add_knowledge(self, source: str, content: str, category: str = "general"):
         """
         Adds a piece of knowledge to the long-term memory's knowledge base.
 
         Args:
             source (str): The origin of the knowledge (e.g., a filename or URL).
             content (str): The summarized content of the knowledge.
+            category (str): A category to classify the knowledge (e.g., 'project_alpha', 'user_preferences').
         """
         knowledge_base = self.long_term_memory.setdefault('knowledge', {})
-        knowledge_base[source] = {
+
+        # Use a structured format for storing knowledge
+        entry_key = f"{category}:{source}"
+        knowledge_base[entry_key] = {
             "content": content,
+            "source": source,
+            "category": category,
             "timestamp": time.time()
         }
         self.save_memory()
 
-    def get_knowledge(self, topic: str) -> List[str]:
+    def get_knowledge(self, topic: str, category_filter: str = None) -> List[str]:
         """
-        Retrieves knowledge relevant to a given topic (simple keyword search).
-        This simulates the retrieval part of RAG.
+        Retrieves knowledge relevant to a topic, with optional category filtering.
+        This simulates a more advanced retrieval part of RAG.
         """
         knowledge_base = self.long_term_memory.get('knowledge', {})
         relevant_knowledge = []
-        for source, data in knowledge_base.items():
-            if topic.lower() in data['content'].lower() or topic.lower() in source.lower():
-                relevant_knowledge.append(f"Source: {source}\nContent: {data['content']}")
+
+        for key, data in knowledge_base.items():
+            # Apply category filter if provided
+            if category_filter and data.get('category') != category_filter:
+                continue
+
+            # Simple keyword search in content, source, and category
+            if topic.lower() in data['content'].lower() \
+                or topic.lower() in data['source'].lower() \
+                or topic.lower() in data['category'].lower():
+
+                relevant_knowledge.append(f"Source: {data['source']} (Category: {data['category']})\nContent: {data['content']}")
+
         return relevant_knowledge
 
     def get_file_memory(self) -> List[Dict[str, str]]:
