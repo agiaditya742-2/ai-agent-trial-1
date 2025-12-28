@@ -3,33 +3,47 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Agent Interface</title>
+    <title>AI Agent Assistant - Advanced</title>
     <link rel="stylesheet" href="style.css">
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
+    <!-- Adding Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 </head>
 <body>
-    <div class="chat-container">
-        <header class="chat-header">
-            <h1>AI Agent Assistant</h1>
-            <div class="header-buttons">
-                <button id="clear-btn" title="Clear conversation history">Clear</button>
-            </div>
-        </header>
-        <div class="chat-box" id="chat-box">
-            <!-- Chat messages will be dynamically inserted here -->
-            <div class="message agent-message">
-                <p>Hello! I am your AI assistant. How can I assist you today?</p>
+    <div id="chat-container">
+        <div class="chat-header">
+            <h2>AI Agent Assistant</h2>
+            <div class="header-controls">
+                <div class="autonomous-mode">
+                    <label for="autonomous-toggle">Autonomous Mode</label>
+                    <label class="switch">
+                        <input type="checkbox" id="autonomous-toggle">
+                        <span class="slider round"></span>
+                    </label>
+                </div>
+                <button id="clear-btn">Clear</button>
             </div>
         </div>
-        <footer class="chat-input-area">
-            <form id="message-form">
-                <button type="button" id="mic-btn" title="Activate voice input">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="24" height="24"><path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zm5.4-3a5.4 5.4 0 0 1-10.8 0H5a7 7 0 0 0 6 6.92V21h2v-3.08A7 7 0 0 0 19 11h-1.6z"/></svg>
-                </button>
-                <input type="text" id="message-input" placeholder="Type your message here, or use the microphone..." autocomplete="off">
-                <button type="submit" title="Send message">Send</button>
-            </form>
-        </footer>
+        <div id="chat-box">
+            <!-- Initial greeting will be loaded here -->
+        </div>
+        <div id="typing-indicator" class="hidden">
+            <span></span><span></span><span></span>
+        </div>
+        <div id="chat-input-area">
+            <button id="upload-btn" title="Upload File">
+                <i class="fas fa-paperclip"></i>
+            </button>
+            <input type="file" id="file-input" style="display: none;"/>
+            <button id="mic-btn" title="Use Microphone">
+                <i class="fas fa-microphone"></i>
+            </button>
+            <input type="text" id="user-input" placeholder="Type your message, or ask for autonomous help...">
+            <div class="deep-thinking-area">
+                <input type="checkbox" id="deep-thinking-checkbox" title="Enable Deep Thinking for this message">
+                <label for="deep-thinking-checkbox">Deep Think</label>
+            </div>
+            <button id="send-btn">Send</button>
+        </div>
     </div>
     <script src="script.js"></script>
 </body>

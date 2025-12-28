@@ -1,10 +1,12 @@
 # agent/core_agent.py
 
 import yaml
+import logging
 from agent.agent_manager import AgentManager
 from agent.memory import Memory
 from agent.personality import Personality
 from agent.llm_client import LLMClient
+from agent.autonomous_agent import AutonomousAgent
 
 class CoreAgent:
     """
@@ -18,6 +20,15 @@ class CoreAgent:
         self.personality = Personality(self.config['personality_rules'])
         self.agent_manager = AgentManager(self.config['agent_configs'])
         self.llm_client = LLMClient(api_key=self.config.get('ai_models', {}).get('openai', {}).get('api_key'))
+
+        # Autonomous and advanced features state
+        self.autonomous_agent: AutonomousAgent = None
+        self.deep_thinking_mode: bool = False
+
+        # Ensure the conversation starts with a greeting if the history is empty
+        if not self.memory.get_conversation_history():
+            greeting = self.personality.get_greeting()
+            self.memory.add_to_short_term({"role": "assistant", "content": greeting})
 
     def _load_config(self, config_path):
         with open(config_path, 'r') as f:
@@ -100,3 +111,34 @@ class CoreAgent:
 
         except Exception as e:
             print(f"Error during reflection: {e}")
+
+    def toggle_deep_thinking(self, mode: bool):
+        """Enable or disable deep thinking mode."""
+        self.deep_thinking_mode = mode
+        logging.info(f"Deep Thinking Mode set to: {self.deep_thinking_mode}")
+        return {"status": "success", "deep_thinking_mode": self.deep_thinking_mode}
+
+    def start_autonomous_mode(self, goal: str):
+        """Starts the autonomous agent with a specific goal."""
+        if self.autonomous_agent and self.autonomous_agent.is_running:
+            return {"status": "error", "message": "Autonomous agent is already running."}
+
+        self.autonomous_agent = AutonomousAgent(goal=goal)
+        self.autonomous_agent.start()
+        logging.info(f"Autonomous agent started for goal: {goal}")
+        return {"status": "success", "message": f"Autonomous agent started for goal: {goal}"}
+
+    def stop_autonomous_mode(self):
+        """Stops the autonomous agent."""
+        if not self.autonomous_agent or not self.autonomous_agent.is_running:
+            return {"status": "error", "message": "Autonomous agent is not running."}
+
+        self.autonomous_agent.stop()
+        logging.info("Autonomous agent stopped.")
+        return {"status": "success", "message": "Autonomous agent stopped."}
+
+    def get_autonomous_status(self):
+        """Gets the status of the autonomous agent."""
+        if not self.autonomous_agent:
+            return {"status": "idle", "message": "Autonomous agent has not been started."}
+        return self.autonomous_agent.get_status()

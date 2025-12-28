@@ -71,6 +71,52 @@ def clear_memory():
     agent.memory.clear_short_term_memory()
     return jsonify({"status": "success", "message": "Conversation history cleared."})
 
+# --- Advanced Feature Routes ---
+
+@app.route('/upload', methods=['POST'])
+def upload_file():
+    if 'file' not in request.files:
+        return jsonify({"error": "No file part"}), 400
+    file = request.files['file']
+    if file.filename == '':
+        return jsonify({"error": "No selected file"}), 400
+
+    # In a real app, save the file securely and pass its info to the agent
+    # For now, we'll just acknowledge the upload
+    filename = file.filename
+    # This is a placeholder for where file handling logic would go.
+    # For now, we just add a message to the conversation.
+    response_message = f"I've received the file '{filename}'. How can I help you with it?"
+    agent.memory.add_to_short_term({"role": "assistant", "content": response_message})
+
+    return jsonify({"response": response_message})
+
+@app.route('/deep_thinking', methods=['POST'])
+def set_deep_thinking():
+    data = request.json
+    mode = data.get('enabled', False)
+    result = agent.toggle_deep_thinking(mode)
+    return jsonify(result)
+
+@app.route('/autonomous/start', methods=['POST'])
+def start_autonomous():
+    data = request.json
+    goal = data.get('goal')
+    if not goal:
+        return jsonify({"error": "A goal is required to start autonomous mode."}), 400
+    result = agent.start_autonomous_mode(goal)
+    return jsonify(result)
+
+@app.route('/autonomous/stop', methods=['POST'])
+def stop_autonomous():
+    result = agent.stop_autonomous_mode()
+    return jsonify(result)
+
+@app.route('/autonomous/status', methods=['GET'])
+def autonomous_status():
+    status = agent.get_autonomous_status()
+    return jsonify(status)
+
 # --- Route for Serving the Frontend ---
 @app.route('/')
 def serve_webapp():

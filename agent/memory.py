@@ -2,186 +2,153 @@
 
 import json
 import os
+from typing import List, Dict, Any
 
 class Memory:
     """
-    Manages the agent's short-term and long-term memory.
-
-    This class is responsible for loading, saving, and providing access to the
-    agent's memory stores. Short-term memory holds the context of the current
-    conversation, while long-term memory stores important information that
-    needs to be retained across sessions.
+    Manages the agent's memory, including conversation history, learned facts (entities),
+    and information about files. It's designed to be more structured and capable
+    than a simple list-based memory.
     """
 
-    def __init__(self, paths):
+    def __init__(self, paths: Dict[str, str]):
         """
-        Initializes the Memory class and loads existing memory from files.
+        Initializes the Memory class.
 
         Args:
             paths (dict): A dictionary containing paths to the memory files.
-                          Example: {'short_term': 'path/to/short.json', 'long_term': 'path/to/long.json'}
         """
         self.short_term_path = paths.get('short_term')
         self.long_term_path = paths.get('long_term')
 
-        self.short_term_memory = self._load_json(self.short_term_path)
-        self.long_term_memory = self._load_json(self.long_term_path)
+        # Ensure memory store directory exists
+        os.makedirs(os.path.dirname(self.short_term_path), exist_ok=True)
 
-    def _load_json(self, path):
-        """
-        Safely loads a JSON file.
+        self.short_term_memory: List[Dict[str, str]] = self._load_json(self.short_term_path, default=[])
 
-        Args:
-            path (str): The path to the JSON file.
+        # Long-term memory is structured to store entities and their attributes
+        self.long_term_memory: Dict[str, Dict[str, Any]] = self._load_json(self.long_term_path, default={"entities": {}})
 
-        Returns:
-            list: The loaded data, or an empty list if the file does not exist or is invalid.
-        """
-        if not path or not os.path.exists(path):
-            return []
-        try:
-            with open(path, 'r') as f:
-                return json.load(f)
-        except (json.JSONDecodeError, FileNotFoundError):
-            return []
+        # In-session memory for uploaded files (not persisted across restarts)
+        self.files: List[Dict[str, str]] = []
 
-    def _save_json(self, path, data):
-        """
-        Saves data to a JSON file.
+    def _load_json(self, file_path: str, default=None):
+        """Safely loads a JSON file."""
+        if os.path.exists(file_path):
+            try:
+                with open(file_path, 'r', encoding='utf-8') as f:
+                    return json.load(f)
+            except (json.JSONDecodeError, IOError):
+                return default if default is not None else {}
+        return default if default is not None else {}
 
-        Args:
-            path (str): The path to the JSON file.
-            data (list): The data to be saved.
-        """
-        if not path:
-            return
-        # Ensure the directory exists
-        os.makedirs(os.path.dirname(path), exist_ok=True)
-        with open(path, 'w') as f:
+    def _save_json(self, file_path: str, data: Any):
+        """Saves data to a JSON file."""
+        with open(file_path, 'w', encoding='utf-8') as f:
             json.dump(data, f, indent=4)
 
-    def add_to_short_term(self, data):
-        """
-        Adds an entry to the short-term memory.
+    def add_to_short_term(self, entry: Dict[str, str]):
+        """Adds an entry to the short-term memory (conversation history)."""
+        self.short_term_memory.append(entry)
+        # We save immediately to ensure state is preserved
+        self.save_memory()
 
-        Args:
-            data (dict): The data to be added (e.g., a message).
+    def add_entity_to_long_term(self, entity_name: str, attributes: Dict[str, Any]):
         """
-        self.short_term_memory.append(data)
+        Adds or updates a structured entity in the long-term memory.
+        An entity is a concept, person, place, or thing with associated facts.
 
-    def get_short_term_memory(self):
+        Example:
+        add_entity_to_long_term("user_profile", {"name": "Aditya", "preference": "likes dogs"})
         """
-        Retrieves the entire short-term memory.
+        entities = self.long_term_memory.setdefault('entities', {})
+        entity = entities.setdefault(entity_name, {})
+        entity.update(attributes)
+        self.save_memory()
 
-        Returns:
-            list: The short-term memory.
-        """
-        return self.short_term_memory
+    def add_file_memory(self, filename: str, file_type: str = "unknown", content_summary: str = "N/A"):
+        """Adds information about a file to the session's memory."""
+        self.files.append({
+            "filename": filename,
+            "type": file_type,
+            "summary": content_summary
+        })
+        print(f"File '{filename}' added to session memory.")
 
-    def get_long_term_memory(self):
-        """
-        Retrieves the entire long-term memory.
+    def get_conversation_history(self, limit: int = 20) -> List[Dict[str, str]]:
+        """Returns the most recent conversation history."""
+        return self.short_term_memory[-limit:]
 
-        Returns:
-            list: The long-term memory.
-        """
-        return self.long_term_memory
+    def get_long_term_entities(self) -> Dict[str, Dict[str, Any]]:
+        """Returns all long-term entities."""
+        return self.long_term_memory.get('entities', {})
 
-    def add_to_long_term(self, data):
-        """
-        Adds an entry to the long-term memory.
-
-        Args:
-            data (dict): The data to be added (e.g., a key fact or summary).
-        """
-        self.long_term_memory.append(data)
+    def get_file_memory(self) -> List[Dict[str, str]]:
+        """Returns information about files in the current session."""
+        return self.files
 
     def clear_short_term_memory(self):
-        """
-        Clears the short-term memory and the corresponding file.
-        """
+        """Clears the short-term conversation history."""
         self.short_term_memory = []
-        # Overwrite the file with an empty list
-        self._save_json(self.short_term_path, [])
+        self.save_memory()
         print("Short-term memory cleared.")
 
-    def get_conversation_history(self, num_messages=10):
-        """
-        Retrieves the most recent messages from short-term memory.
-
-        Args:
-            num_messages (int): The number of recent messages to retrieve.
-
-        Returns:
-            list: A list of the most recent messages.
-        """
-        return self.short_term_memory[-num_messages:]
-
-    def consolidate_memory(self):
-        """
-        Moves information from short-term to long-term memory.
-
-        This is a placeholder for a more complex summarization and consolidation
-        logic. In this simple implementation, it moves the entire short-term
-        history to long-term and clears short-term memory.
-        """
-        print("Consolidating memory...")
-        self.long_term_memory.extend(self.short_term_memory)
-        self.short_term_memory = []
-        print("Memory consolidated.")
-
     def save_memory(self):
-        """
-        Saves both short-term and long-term memory to their respective files.
-        """
-        print("Saving memory...")
+        """Saves both short-term and long-term memory to their respective files."""
         self._save_json(self.short_term_path, self.short_term_memory)
         self._save_json(self.long_term_path, self.long_term_memory)
-        print("Memory saved.")
 
 if __name__ == '__main__':
-    # Example usage for testing the Memory class
+    print("--- Testing Enhanced Memory System ---")
 
-    # Define paths for dummy memory files
     test_paths = {
-        'short_term': 'memory_store/short_term_test.json',
-        'long_term': 'memory_store/long_term_test.json'
+        'short_term': 'memory_store/test_short_term.json',
+        'long_term': 'memory_store/test_long_term.json'
     }
 
-    # Ensure the test files are clean before starting
-    if os.path.exists(test_paths['short_term']):
-        os.remove(test_paths['short_term'])
-    if os.path.exists(test_paths['long_term']):
-        os.remove(test_paths['long_term'])
+    # Clean up previous test files
+    if os.path.exists(test_paths['short_term']): os.remove(test_paths['short_term'])
+    if os.path.exists(test_paths['long_term']): os.remove(test_paths['long_term'])
 
-    # 1. Initialize Memory
+    # 1. Initialization
     memory = Memory(test_paths)
-    print(f"Initial short-term memory: {memory.get_short_term_memory()}")
-    print(f"Initial long-term memory: {memory.get_long_term_memory()}")
+    print("\n1. Initialized Memory:")
+    print(f"  Short-term: {memory.get_conversation_history()}")
+    print(f"  Long-term: {memory.get_long_term_entities()}")
 
-    # 2. Add some data to short-term memory
-    memory.add_to_short_term({"role": "user", "content": "Hello, agent!"})
-    memory.add_to_short_term({"role": "assistant", "content": "Hello, user!"})
-    print(f"Updated short-term memory: {memory.get_short_term_memory()}")
+    # 2. Add to short-term memory
+    memory.add_to_short_term({"role": "user", "content": "My name is Aditya."})
+    memory.add_to_short_term({"role": "assistant", "content": "Nice to meet you, Aditya!"})
+    print("\n2. After adding to short-term memory:")
+    print(f"  Short-term: {memory.get_conversation_history()}")
 
-    # 3. Consolidate memory
-    memory.consolidate_memory()
-    print(f"Short-term after consolidation: {memory.get_short_term_memory()}")
-    print(f"Long-term after consolidation: {memory.get_long_term_memory()}")
+    # 3. Add a structured entity to long-term memory
+    memory.add_entity_to_long_term("user_profile", {"name": "Aditya", "status": "active"})
+    memory.add_entity_to_long_term("user_profile", {"interest": "AI agents"})
+    print("\n3. After adding entity to long-term memory:")
+    print(f"  Long-term Entities: {memory.get_long_term_entities()}")
 
-    # 4. Add new data to short-term memory
-    memory.add_to_short_term({"role": "user", "content": "How are you?"})
-    print(f"New short-term memory: {memory.get_short_term_memory()}")
+    # 4. Add file memory
+    memory.add_file_memory("project_brief.pdf", file_type="PDF", content_summary="A project about AI.")
+    print("\n4. After adding file to session memory:")
+    print(f"  File Memory: {memory.get_file_memory()}")
 
-    # 5. Save all memory to files
-    memory.save_memory()
+    # 5. Clear short-term memory
+    memory.clear_short_term_memory()
+    print("\n5. After clearing short-term memory:")
+    print(f"  Short-term: {memory.get_conversation_history()}")
 
-    # 6. Verify by creating a new Memory instance and loading the data
-    print("\n--- Verifying persistence ---")
-    new_memory = Memory(test_paths)
-    print(f"Loaded short-term memory: {new_memory.get_short_term_memory()}")
-    print(f"Loaded long-term memory: {new_memory.get_long_term_memory()}")
+    # 6. Verify persistence by reloading
+    print("\n6. Verifying persistence...")
+    reloaded_memory = Memory(test_paths)
+    print(f"  Reloaded Long-term Entities: {reloaded_memory.get_long_term_entities()}")
+    print(f"  Reloaded Short-term (should be empty): {reloaded_memory.get_conversation_history()}")
+
+    # Session-only memory should not persist
+    print(f"  Reloaded File Memory (should be empty): {reloaded_memory.get_file_memory()}")
 
     # Clean up test files
-    os.remove(test_paths['short_term'])
-    os.remove(test_paths['long_term'])
+    if os.path.exists(test_paths['short_term']): os.remove(test_paths['short_term'])
+    if os.path.exists(test_paths['long_term']): os.remove(test_paths['long_term'])
+
+    print("\n--- Memory System Test Complete ---")

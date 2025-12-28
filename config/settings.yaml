@@ -1,80 +1,102 @@
 # config/settings.yaml
+# This file contains the primary configuration for the AI Agent system.
 
-# This file contains the central configuration for the AI Agent system.
-# By modifying this file, you can change the agent's behavior, add new agents,
-# and adjust its personality without altering the source code.
+# Configuration for the AI models the agent can use.
+# The 'default' key specifies which model to use if not otherwise specified.
+# The API key is a placeholder and should be replaced with a real key for live operation.
+ai_models:
+  default: openai
+  openai:
+    api_key: "YOUR_API_KEY_HERE"
+    # Parameters for the LLM, like temperature, can be added here.
+    # temperature: 0.7
 
-# --- Agent Configurations ---
-# Defines the sub-agents that the AgentManager should load.
-# Each key is the agent's name, used for routing in the CoreAgent.
-# 'module' is the Python module path.
-# 'class' is the class name within that module.
-agent_configs:
-  chat_agent:
-    module: "agents.chat_agent"
-    class: "ChatAgent"
-  voice_agent:
-    module: "agents.voice_agent"
-    class: "VoiceAgent"
-  tool_agent:
-    module: "agents.tool_agent"
-    class: "ToolAgent"
-  task_agent:
-    module: "agents.task_agent"
-    class: "TaskAgent"
-
-# --- Memory Storage Paths ---
-# Specifies the locations for the JSON files used for memory.
-# These paths are relative to the project's root directory.
+# Paths for the agent's memory stores.
 memory_store_paths:
   short_term: "memory_store/short_term.json"
   long_term: "memory_store/long_term.json"
 
-# --- Personality Rules ---
-# Controls the agent's communication style and standard responses.
+# Configuration for the agent's personality.
+# 'default' specifies which profile to use on startup.
+# 'profiles' contains the detailed personality definitions.
 personality_rules:
-  # The active personality profile. Can be "friendly", "formal", etc.
-  active_profile: "friendly"
-
+  default: "professional_assistant"
   profiles:
-    friendly:
-      style_prefix: "AI Assistant: "
-      standard_responses:
-        greeting: "Hey there! I'm your friendly AI assistant. What can I do for you today?"
-        farewell: "Catch you later! Have a great day."
-        confirmation: "Got it!"
+    professional_assistant:
+      greetings:
+        - "Good day. I am ready to assist you. How may I help?"
+        - "Hello. I am the AI assistant, prepared for your queries."
+        - "Welcome. Please let me know how I can be of service."
+      farewells:
+        - "Goodbye. It was a pleasure assisting you."
+        - "I look forward to our next interaction. Farewell."
+      response_intros:
+        - "Certainly."
+        - "Based on the available data,"
+        - "My analysis indicates that"
+        - "Of course."
+      response_outros:
+        - "."
+        - "."
+        - "."
+        - ". Please let me know if you require further clarification."
+      error_messages:
+        - "I apologize, but an internal error has occurred. Please try your request again later."
+        - "There seems to be a system malfunction. I am unable to process your request at this time."
 
-    formal:
-      style_prefix: "AI Protocol Unit: "
-      standard_responses:
-        greeting: "Greetings. I am the AI Protocol Unit, ready to assist. Please state your query."
-        farewell: "Mission complete. Terminating session."
-        confirmation: "Acknowledged."
+    friendly_companion:
+      greetings:
+        - "Hey there! What's on your mind today?"
+        - "Hi! Super excited to help you out. What can I do?"
+        - "What's up? Let's get started!"
+      farewells:
+        - "Catch you later!"
+        - "Talk to you soon! Have a great one!"
+      response_intros:
+        - "So, here's the deal:"
+        - "Alright, check this out:"
+        - "Totally! I think"
+        - "You got it!"
+      response_outros:
+        - "!"
+        - "! Hope that helps!"
+        - ". Let me know what you think!"
+        - " :) "
+      error_messages:
+        - "Oops! Something went a little haywire. Can you try that again?"
+        - "Yikes, I think I broke something. My bad! Let's give it another shot."
 
-# --- AI Model Placeholders ---
-# This section is for configuring connections to external AI models.
-# In a real implementation, you would put your API keys and model names here.
-# For now, they are placeholders.
-ai_models:
-  # Example for OpenAI
-  openai:
-    api_key: "YOUR_OPENAI_API_KEY_HERE"
-    default_model: "gpt-4"
-  # Example for Google Gemini
-  gemini:
-    api_key: "YOUR_GEMINI_API_KEY_HERE"
-    default_model: "gemini-pro"
-  # Example for Anthropic Claude
-  claude:
-    api_key: "YOUR_CLAUDE_API_KEY_HERE"
-    default_model: "claude-2"
+    stoic_philosopher:
+      greetings:
+        - "The present moment is here. What do you seek to understand?"
+        - "We are here. What is the nature of your inquiry?"
+      farewells:
+        - "The only constant is change. Farewell."
+        - "May your choices be wise. Goodbye."
+      response_intros:
+        - "As the ancients would say,"
+        - "Wisdom suggests that"
+        - "Consider this:"
+        - "The nature of the matter is this:"
+      response_outros:
+        - "."
+        - ". Meditate on this."
+      error_messages:
+        - "Error is an opportunity for learning. An error has occurred."
+        - "The obstacle is the way. We have encountered an obstacle in processing your request."
 
-# --- Tool-Specific Settings ---
-# If any tools required API keys or other settings, they would go here.
-tool_settings:
-  weather_api:
-    api_key: "YOUR_WEATHER_API_KEY"
-    base_url: "https://api.weather.com/v1/"
-  news_api:
-    api_key: "YOUR_NEWS_API_KEY"
-    base_url: "https://api.news.com/v2/"
+# Agent-specific configurations for the AgentManager.
+# Each agent needs a 'module' and a 'class' to be dynamically loaded.
+agent_configs:
+  chat_agent:
+    module: "agents.chat_agent"
+    class: "ChatAgent"
+    enabled: true
+  tool_agent:
+    module: "agents.tool_agent"
+    class: "ToolAgent"
+    enabled: true
+  task_agent:
+    module: "agents.task_agent"
+    class: "TaskAgent"
+    enabled: true
