@@ -2,128 +2,144 @@
 
 import json
 import os
+import logging
+from typing import List, Dict, Any
+
+# Configure logging for this module
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - [%(levelname)s] - (TaskAgent) - %(message)s')
 
 class TaskAgent:
     """
-    Manages task planning, decomposition, and execution.
-
-    This agent is responsible for handling tasks that may require multiple steps
-    or need to be remembered over time, like reminders or to-do list items.
-
-    This version saves tasks to a JSON file to make them persistent across
-    sessions.
+    Manages complex tasks, including to-do lists, reminders, and multi-step plans.
+    Tasks are persistent and saved to a JSON file.
     """
 
     def __init__(self, tasks_file='memory_store/tasks.json'):
         """
         Initializes the TaskAgent and loads tasks from a file.
-
-        Args:
-            tasks_file (str): The path to the JSON file for storing tasks.
         """
         self.tasks_file = tasks_file
-        self.tasks = self._load_tasks()
+        self.tasks: List[Dict[str, Any]] = self._load_tasks()
 
-    def _load_tasks(self):
+    def _load_tasks(self) -> List[Dict[str, Any]]:
         """
-        Loads tasks from the JSON file.
-
-        Returns:
-            list: The list of tasks, or an empty list if the file is not found.
+        Loads tasks from the JSON file. If the file doesn't exist, returns an empty list.
         """
         if not os.path.exists(self.tasks_file):
             return []
         try:
             with open(self.tasks_file, 'r') as f:
-                return json.load(f)
+                tasks = json.load(f)
+                # Ensure tasks are in the new format
+                return [t if isinstance(t, dict) else {"description": t, "completed": False} for t in tasks]
         except (json.JSONDecodeError, FileNotFoundError):
+            logging.warning("Could not load or parse tasks file. Starting with an empty list.")
             return []
 
     def _save_tasks(self):
         """
         Saves the current list of tasks to the JSON file.
         """
-        os.makedirs(os.path.dirname(self.tasks_file), exist_ok=True)
-        with open(self.tasks_file, 'w') as f:
-            json.dump(self.tasks, f, indent=4)
+        try:
+            os.makedirs(os.path.dirname(self.tasks_file), exist_ok=True)
+            with open(self.tasks_file, 'w') as f:
+                json.dump(self.tasks, f, indent=4)
+        except IOError as e:
+            logging.error(f"Could not save tasks to file '{self.tasks_file}'. Error: {e}")
 
-    def execute(self, user_input):
+    def execute(self, user_input: str) -> str:
         """
-        Parses the user input to determine the desired task operation.
-
-        Args:
-            user_input (str): The user's command related to a task.
-
-        Returns:
-            str: A confirmation or the result of the task operation.
+        Parses the user's command and routes to the appropriate task function.
         """
-        print(f"[TaskAgent] Processing input: '{user_input}'")
+        user_input = user_input.lower()
+        logging.info(f"Processing task command: '{user_input}'")
 
-        # Simplified logic to differentiate between adding and listing tasks
-        if user_input.lower().startswith("remind me to") or user_input.lower().startswith("add task"):
+        # Routing logic for task operations
+        if user_input.startswith("add task") or user_input.startswith("remind me to"):
             return self._add_task(user_input)
-        elif "what are my tasks" in user_input.lower() or "list tasks" in user_input.lower():
+        elif "list tasks" in user_input or "what are my tasks" in user_input:
             return self._list_tasks()
+        elif user_input.startswith("complete task") or user_input.startswith("finish task"):
+            return self._complete_task(user_input)
+        elif "clear all tasks" in user_input:
+            return self._clear_tasks()
         else:
-            return "I'm not sure how to handle that task. Try 'add task' or 'list tasks'."
+            return "I'm not sure how to handle that task. Try 'add', 'list', or 'complete'."
 
-    def _add_task(self, task_description):
-        """
-        Adds a new task to the task list.
+    def _add_task(self, command: str) -> str:
+        """Adds a new task."""
+        description = command.replace("add task", "").replace("remind me to", "").strip()
+        if not description:
+            return "What is the task you would like to add?"
 
-        Args:
-            task_description (str): The full user command for adding a task.
+        new_task = {"description": description, "completed": False}
+        self.tasks.append(new_task)
+        self._save_tasks()
+        logging.info(f"Added new task: '{description}'")
+        return f"Task added: '{description}'."
 
-        Returns:
-            str: A confirmation message.
-        """
-        # A simple way to extract the task from the command
-        task = task_description.replace("remind me to", "").replace("add task", "").strip()
-
-        if task:
-            self.tasks.append(task)
-            self._save_tasks()  # Save tasks after adding a new one
-            print(f"[TaskAgent] Added task: '{task}'")
-            return f"Okay, I've added '{task}' to your to-do list."
-        else:
-            return "What task would you like to add?"
-
-    def _list_tasks(self):
-        """
-        Lists all the current tasks.
-
-        Returns:
-            str: A string containing the list of tasks, or a message if empty.
-        """
-        print("[TaskAgent] Listing tasks.")
+    def _list_tasks(self) -> str:
+        """Lists all current tasks, showing their status."""
         if not self.tasks:
-            return "You have no tasks in your to-do list."
-        else:
-            # Format the list for display
-            task_list_str = "\n".join(f"- {task}" for task in self.tasks)
-            return f"Here are your current tasks:\n{task_list_str}"
+            return "Your task list is empty."
+
+        response = "Here are your tasks:\n"
+        for i, task in enumerate(self.tasks):
+            status = "✓" if task.get('completed') else " "
+            response += f"{i + 1}. [{status}] {task['description']}\n"
+        return response.strip()
+
+    def _complete_task(self, command: str) -> str:
+        """Marks a task as complete by its number."""
+        try:
+            # Extract the number from "complete task 1"
+            task_num_str = command.split()[-1]
+            task_index = int(task_num_str) - 1
+
+            if 0 <= task_index < len(self.tasks):
+                if self.tasks[task_index]['completed']:
+                    return f"Task {task_num_str} was already marked as complete."
+
+                self.tasks[task_index]['completed'] = True
+                self._save_tasks()
+                logging.info(f"Completed task {task_num_str}: '{self.tasks[task_index]['description']}'")
+                return f"Great! I've marked task {task_num_str} as complete."
+            else:
+                return "That task number is not on your list."
+        except (ValueError, IndexError):
+            return "Please specify a valid task number to complete (e.g., 'complete task 1')."
+
+    def _clear_tasks(self) -> str:
+        """Clears all tasks from the list."""
+        self.tasks = []
+        self._save_tasks()
+        logging.info("All tasks have been cleared.")
+        return "Your task list has been cleared."
 
 if __name__ == '__main__':
-    # Example usage for testing the TaskAgent directly
+    print("--- Testing Expanded TaskAgent ---")
+    agent = TaskAgent('memory_store/test_tasks.json')
+    agent._clear_tasks() # Ensure a clean state
 
-    task_agent = TaskAgent()
+    # 1. Add tasks
+    print(agent.execute("add task Buy groceries"))
+    print(agent.execute("remind me to Call the doctor"))
 
-    # Test case 1: Add a task
-    add_command_1 = "remind me to buy milk"
-    add_response_1 = task_agent.execute(add_command_1)
-    print(f"User: '{add_command_1}'\nAgent: '{add_response_1}'\n")
+    # 2. List tasks
+    print("\n[2] Listing tasks:")
+    print(agent.execute("list tasks"))
 
-    # Test case 2: Add another task
-    add_command_2 = "add task finish the project report"
-    add_response_2 = task_agent.execute(add_command_2)
-    print(f"User: '{add_command_2}'\nAgent: '{add_response_2}'\n")
+    # 3. Complete a task
+    print("\n[3] Completing a task:")
+    print(agent.execute("complete task 1"))
+    print(agent.execute("list tasks"))
 
-    # Test case 3: List the tasks
-    list_command = "what are my tasks"
-    list_response = task_agent.execute(list_command)
-    print(f"User: '{list_command}'\nAgent: '{list_response}'\n")
+    # 4. Clear tasks
+    print("\n[4] Clearing tasks:")
+    print(agent.execute("clear all tasks"))
+    print(agent.execute("list tasks"))
 
-    # Test case 4: Handle an unknown command
-    unknown_command = "are my tasks done?"
-    unknown_response = task_agent.execute(unknown_command)
-    print(f"User: '{unknown_command}'\nAgent: '{unknown_response}'\n")
+    if os.path.exists('memory_store/test_tasks.json'):
+        os.remove('memory_store/test_tasks.json')
+
+    print("\n--- TaskAgent Test Complete ---")

@@ -11,6 +11,13 @@ ai_models:
     # Parameters for the LLM, like temperature, can be added here.
     # temperature: 0.7
 
+# Configuration for external APIs, such as web search.
+# Replace placeholders with real keys to enable live internet access.
+external_apis:
+  google_search:
+    api_key: "YOUR_GOOGLE_SEARCH_API_KEY"
+    search_engine_id: "YOUR_SEARCH_ENGINE_ID"
+
 # Paths for the agent's memory stores.
 memory_store_paths:
   short_term: "memory_store/short_term.json"

@@ -2,6 +2,7 @@
 
 import json
 import os
+import time
 from typing import List, Dict, Any
 
 class Memory:
@@ -27,7 +28,7 @@ class Memory:
         self.short_term_memory: List[Dict[str, str]] = self._load_json(self.short_term_path, default=[])
 
         # Long-term memory is structured to store entities and their attributes
-        self.long_term_memory: Dict[str, Dict[str, Any]] = self._load_json(self.long_term_path, default={"entities": {}})
+        self.long_term_memory: Dict[str, Dict[str, Any]] = self._load_json(self.long_term_path, default={"entities": {}, "knowledge": {}})
 
         # In-session memory for uploaded files (not persisted across restarts)
         self.files: List[Dict[str, str]] = []
@@ -82,6 +83,33 @@ class Memory:
     def get_long_term_entities(self) -> Dict[str, Dict[str, Any]]:
         """Returns all long-term entities."""
         return self.long_term_memory.get('entities', {})
+
+    def add_knowledge(self, source: str, content: str):
+        """
+        Adds a piece of knowledge to the long-term memory's knowledge base.
+
+        Args:
+            source (str): The origin of the knowledge (e.g., a filename or URL).
+            content (str): The summarized content of the knowledge.
+        """
+        knowledge_base = self.long_term_memory.setdefault('knowledge', {})
+        knowledge_base[source] = {
+            "content": content,
+            "timestamp": time.time()
+        }
+        self.save_memory()
+
+    def get_knowledge(self, topic: str) -> List[str]:
+        """
+        Retrieves knowledge relevant to a given topic (simple keyword search).
+        This simulates the retrieval part of RAG.
+        """
+        knowledge_base = self.long_term_memory.get('knowledge', {})
+        relevant_knowledge = []
+        for source, data in knowledge_base.items():
+            if topic.lower() in data['content'].lower() or topic.lower() in source.lower():
+                relevant_knowledge.append(f"Source: {source}\nContent: {data['content']}")
+        return relevant_knowledge
 
     def get_file_memory(self) -> List[Dict[str, str]]:
         """Returns information about files in the current session."""

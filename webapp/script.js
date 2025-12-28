@@ -5,262 +5,234 @@ document.addEventListener('DOMContentLoaded', () => {
     const chatBox = document.getElementById('chat-box');
     const userInput = document.getElementById('user-input');
     const sendBtn = document.getElementById('send-btn');
-    const clearBtn = document.getElementById('clear-btn');
-    const micBtn = document.getElementById('mic-btn');
-    const typingIndicator = document.getElementById('typing-indicator');
+    const menuBtn = document.getElementById('menu-btn');
+    const menuDropdown = document.getElementById('menu-dropdown');
+    const feedAgentBtn = document.getElementById('feed-agent-btn');
+    const setWakeWordBtn = document.getElementById('set-wake-word-btn');
+    const modal = document.getElementById('settings-modal');
+    const modalBody = document.getElementById('modal-body');
+    const closeModalBtn = document.querySelector('.close-btn');
+    const listeningIndicator = document.getElementById('listening-indicator');
 
-    // Advanced Feature Elements
-    const uploadBtn = document.getElementById('upload-btn');
-    const fileInput = document.getElementById('file-input');
-    const autonomousToggle = document.getElementById('autonomous-toggle');
-    const deepThinkingCheckbox = document.getElementById('deep-thinking-checkbox');
+    // --- State Management ---
+    let wakeWord = localStorage.getItem('agentWakeWord') || 'agent';
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    let recognition;
 
-    let autonomousStatusInterval = null;
-
-    // --- Core Functions ---
-
-    /**
-     * Appends a message to the chat box.
-     * @param {string} message - The message content.
-     * @param {string} sender - 'user' or 'ai'.
-     */
+    // --- Core Chat Functions ---
     const appendMessage = (message, sender) => {
         const messageDiv = document.createElement('div');
-        messageDiv.classList.add('chat-message', sender === 'user' ? 'user-message' : 'ai-message');
+        messageDiv.className = `chat-message ${sender}-message`;
         messageDiv.textContent = message;
         chatBox.appendChild(messageDiv);
         chatBox.scrollTop = chatBox.scrollHeight;
     };
 
-    /**
-     * Shows or hides the typing indicator.
-     * @param {boolean} show - Whether to show the indicator.
-     */
-    const showTypingIndicator = (show) => {
-        typingIndicator.classList.toggle('hidden', !show);
-        if (show) chatBox.scrollTop = chatBox.scrollHeight;
-    };
-
-    /**
-     * Sends a message to the backend and displays the response.
-     */
     const sendMessage = async () => {
         const message = userInput.value.trim();
         if (!message) return;
-
         appendMessage(message, 'user');
         userInput.value = '';
-        showTypingIndicator(true);
-
+        // Typing indicator logic here if desired
         try {
-            // Toggle deep thinking mode for this specific request if checked
-            const deepThinking = deepThinkingCheckbox.checked;
-            await fetch('/deep_thinking', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ enabled: deepThinking }),
-            });
-
             const response = await fetch('/chat', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ message: message }),
+                body: JSON.stringify({ message }),
             });
-
-            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-
             const data = await response.json();
             appendMessage(data.response, 'ai');
-
         } catch (error) {
-            console.error('Error sending message:', error);
-            appendMessage('Sorry, I seem to be having trouble connecting. Please try again later.', 'ai');
-        } finally {
-            showTypingIndicator(false);
-            // Reset deep thinking mode after the request
-            deepThinkingCheckbox.checked = false;
-            await fetch('/deep_thinking', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ enabled: false }),
-            });
+            console.error('Chat error:', error);
+            appendMessage('Error: Could not connect to the server.', 'ai');
         }
     };
 
-    /**
-     * Loads the initial chat history from the server.
-     */
     const loadHistory = async () => {
         try {
             const response = await fetch('/history');
+            if (!response.ok) throw new Error('Failed to fetch history.');
             const data = await response.json();
-            chatBox.innerHTML = '';
+            chatBox.innerHTML = ''; // Clear the box before loading
             data.history.forEach(item => {
                 appendMessage(item.content, item.role === 'user' ? 'user' : 'ai');
             });
         } catch (error) {
             console.error('Error loading history:', error);
+            appendMessage('Could not load chat history.', 'ai');
         }
     };
 
-    /**
-     * Clears the chat history on the server and UI.
-     */
-    const clearHistory = async () => {
-        try {
-            await fetch('/clear_memory', { method: 'POST' });
-            loadHistory();
-        } catch (error) {
-            console.error('Error clearing history:', error);
-        }
+    // --- Modal & Menu Logic ---
+    const openModal = (content) => {
+        modalBody.innerHTML = content;
+        modal.style.display = 'block';
     };
 
-    // --- Advanced Feature Functions ---
-
-    /**
-     * Handles file upload.
-     */
-    const handleFileUpload = async (event) => {
-        const file = event.target.files[0];
-        if (!file) return;
-
-        const formData = new FormData();
-        formData.append('file', file);
-
-        showTypingIndicator(true);
-        try {
-            const response = await fetch('/upload', {
-                method: 'POST',
-                body: formData,
-            });
-            if (!response.ok) throw new Error('File upload failed.');
-
-            const data = await response.json();
-            appendMessage(`File '${file.name}' uploaded successfully.`, 'user');
-            appendMessage(data.response, 'ai');
-        } catch (error) {
-            console.error('Error uploading file:', error);
-            appendMessage('Sorry, there was an error uploading your file.', 'ai');
-        } finally {
-            showTypingIndicator(false);
-            // Reset the file input so the same file can be uploaded again
-            fileInput.value = '';
-        }
+    const closeModal = () => {
+        modal.style.display = 'none';
     };
 
-    /**
-     * Starts or stops the autonomous agent.
-     */
-    const toggleAutonomousMode = async () => {
-        if (autonomousToggle.checked) {
-            // Start autonomous mode
-            const goal = prompt("Please enter the goal for the autonomous agent:");
-            if (goal) {
-                try {
-                    const response = await fetch('/autonomous/start', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ goal: goal }),
-                    });
-                    const data = await response.json();
-                    appendMessage(`Autonomous mode started. Goal: ${goal}`, 'ai');
-                    startStatusPolling();
-                } catch (error) {
-                    console.error('Error starting autonomous mode:', error);
-                    appendMessage('Failed to start autonomous mode.', 'ai');
-                    autonomousToggle.checked = false;
-                }
-            } else {
-                autonomousToggle.checked = false; // User cancelled
+    menuBtn.addEventListener('click', () => {
+        menuDropdown.classList.toggle('show');
+    });
+
+    window.addEventListener('click', (event) => {
+        if (!event.target.matches('#menu-btn, #menu-btn *')) {
+            if (menuDropdown.classList.contains('show')) {
+                menuDropdown.classList.remove('show');
             }
-        } else {
-            // Stop autonomous mode
+        }
+    });
+
+    closeModalBtn.addEventListener('click', closeModal);
+    window.addEventListener('click', (event) => {
+        if (event.target == modal) {
+            closeModal();
+        }
+    });
+
+    // --- Feature-Specific Modal Content ---
+    setWakeWordBtn.addEventListener('click', () => {
+        openModal(`
+            <h2>Set Wake Word</h2>
+            <p>Set a custom wake word to activate the agent via voice. The current wake word is: <strong>${wakeWord}</strong></p>
+            <input type="text" id="wake-word-input" placeholder="Enter new wake word" />
+            <button id="save-wake-word">Save</button>
+        `);
+        document.getElementById('save-wake-word').addEventListener('click', () => {
+            const newWakeWord = document.getElementById('wake-word-input').value.trim().toLowerCase();
+            if (newWakeWord) {
+                wakeWord = newWakeWord;
+                localStorage.setItem('agentWakeWord', wakeWord);
+                alert(`Wake word updated to "${wakeWord}". Restarting listener.`);
+                stopPersistentListening();
+                startPersistentListening();
+                closeModal();
+            }
+        });
+    });
+
+    feedAgentBtn.addEventListener('click', () => {
+        openModal(`
+            <h2>Feed Agent Data</h2>
+            <p>Provide the agent with new knowledge via text or by uploading a PDF.</p>
+            <textarea id="text-feed-input" rows="5" placeholder="Paste text here..."></textarea>
+            <input type="file" id="pdf-feed-input" accept=".pdf" />
+            <button id="submit-feed">Feed Agent</button>
+        `);
+        document.getElementById('submit-feed').addEventListener('click', async () => {
+            const textData = document.getElementById('text-feed-input').value;
+            const file = document.getElementById('pdf-feed-input').files[0];
+            const formData = new FormData();
+
+            if (textData) formData.append('text', textData);
+            if (file) formData.append('file', file);
+
+            if (!textData && !file) {
+                alert("Please provide text or a file.");
+                return;
+            }
+
             try {
-                await fetch('/autonomous/stop', { method: 'POST' });
-                appendMessage('Autonomous mode stopped by user.', 'ai');
-                stopStatusPolling();
+                const response = await fetch('/feed', { method: 'POST', body: formData });
+                const result = await response.json();
+                alert(result.message);
+                closeModal();
             } catch (error) {
-                console.error('Error stopping autonomous mode:', error);
+                console.error("Feed error:", error);
+                alert("Error feeding agent.");
             }
-        }
-    };
+        });
+    });
 
-    /**
-     * Polls the autonomous agent's status.
-     */
-    const checkAutonomousStatus = async () => {
-        try {
-            const response = await fetch('/autonomous/status');
-            const data = await response.json();
+    // --- Wake Word & Speech Recognition ---
+    if (SpeechRecognition) {
+        const startPersistentListening = () => {
+            recognition = new SpeechRecognition();
+            recognition.continuous = true;
+            recognition.interimResults = true;
 
-            // Display updates in the chat
-            if (data.task_log && data.task_log.length > 0) {
-                const lastLog = data.task_log[data.task_log.length - 1];
-                const logMessage = `[Autonomous Agent]: ${lastLog.step} - ${lastLog.details || lastLog.status}`;
-                // Avoid duplicating messages
-                if (chatBox.lastChild.textContent !== logMessage) {
-                    appendMessage(logMessage, 'ai');
+            recognition.onstart = () => {
+                console.log("Persistent listener started.");
+            };
+
+            recognition.onresult = (event) => {
+                const transcript = Array.from(event.results)
+                    .map(result => result[0])
+                    .map(result => result.transcript)
+                    .join('')
+                    .toLowerCase();
+
+                if (transcript.includes(wakeWord)) {
+                    console.log(`Wake word "${wakeWord}" detected!`);
+                    recognition.stop();
+                    activateFullRecognition();
                 }
+            };
+
+            recognition.onerror = (event) => {
+                console.error("Speech recognition error:", event.error);
+                if (event.error === 'not-allowed') {
+                    alert("Microphone access was denied. Please allow it to use voice features.");
+                }
+            };
+
+            recognition.onend = () => {
+                 // The listener can sometimes stop on its own, so we restart it.
+                 // This ensures it's always listening in the background.
+                if (!isActivatingFullRecognition) {
+                    recognition.start();
+                }
+            };
+
+            recognition.start();
+        };
+
+        let isActivatingFullRecognition = false;
+
+        const activateFullRecognition = () => {
+            isActivatingFullRecognition = true;
+            listeningIndicator.classList.remove('hidden');
+
+            const fullRecognition = new SpeechRecognition();
+            fullRecognition.continuous = false;
+            fullRecognition.interimResults = false;
+
+            fullRecognition.onresult = (event) => {
+                const command = event.results[0][0].transcript;
+                userInput.value = command;
+                sendMessage();
+            };
+
+            fullRecognition.onend = () => {
+                listeningIndicator.classList.add('hidden');
+                // Restart the persistent listener
+                isActivatingFullRecognition = false;
+                startPersistentListening();
+            };
+
+            fullRecognition.start();
+        };
+
+        const stopPersistentListening = () => {
+            if (recognition) {
+                recognition.stop();
             }
+        };
 
-            if (!data.is_running) {
-                stopStatusPolling();
-                appendMessage('Autonomous agent has completed its goal.', 'ai');
-                autonomousToggle.checked = false;
-            }
-        } catch (error) {
-            console.error('Error checking autonomous status:', error);
-            stopStatusPolling();
-        }
-    };
+        startPersistentListening(); // Start on page load
 
-    const startStatusPolling = () => {
-        if (!autonomousStatusInterval) {
-            autonomousStatusInterval = setInterval(checkAutonomousStatus, 3000); // Poll every 3 seconds
-        }
-    };
+    } else {
+        console.warn("Speech Recognition API not supported in this browser.");
+    }
 
-    const stopStatusPolling = () => {
-        clearInterval(autonomousStatusInterval);
-        autonomousStatusInterval = null;
-    };
-
-
-    // --- Event Listeners ---
+    // --- Initializers ---
     sendBtn.addEventListener('click', sendMessage);
     userInput.addEventListener('keypress', (e) => {
         if (e.key === 'Enter') sendMessage();
     });
-    clearBtn.addEventListener('click', clearHistory);
-    uploadBtn.addEventListener('click', () => fileInput.click());
-    fileInput.addEventListener('change', handleFileUpload);
-    autonomousToggle.addEventListener('change', toggleAutonomousMode);
 
-    // --- Voice Recognition (Browser API) ---
-    const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
-    recognition.lang = 'en-US';
-    recognition.interimResults = false;
-
-    micBtn.addEventListener('click', () => {
-        micBtn.classList.add('active'); // Style the button to show it's listening
-        recognition.start();
-    });
-
-    recognition.onresult = (event) => {
-        const transcript = event.results[0][0].transcript;
-        userInput.value = transcript;
-        sendMessage();
-    };
-
-    recognition.onend = () => {
-        micBtn.classList.remove('active');
-    };
-
-    recognition.onerror = (event) => {
-        console.error('Speech recognition error:', event.error);
-        micBtn.classList.remove('active');
-    };
-
-    // --- Initial Load ---
+    // Load initial chat history or greeting
     loadHistory();
 });

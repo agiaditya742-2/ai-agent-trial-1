@@ -3,6 +3,8 @@
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 from agent.core_agent import CoreAgent
+import PyPDF2
+import io
 
 # Initialize the Flask application
 app = Flask(__name__, static_folder='webapp')
@@ -70,6 +72,50 @@ def clear_memory():
 
     agent.memory.clear_short_term_memory()
     return jsonify({"status": "success", "message": "Conversation history cleared."})
+
+@app.route('/feed', methods=['POST'])
+def feed_agent():
+    """
+    Allows feeding the agent new knowledge from text or PDF files.
+    """
+    if not agent:
+        return jsonify({"error": "The AI agent is not available."}), 500
+
+    text_data = request.form.get('text')
+    file = request.files.get('file')
+
+    knowledge_source = "unknown"
+
+    if file:
+        filename = file.filename
+        knowledge_source = f"file: {filename}"
+        content = ""
+        if filename.lower().endswith('.pdf'):
+            try:
+                pdf_reader = PyPDF2.PdfReader(io.BytesIO(file.read()))
+                for page in pdf_reader.pages:
+                    content += page.extract_text()
+                # Simulate RAG by adding a summary to long-term memory
+                summary = f"The user uploaded a PDF named '{filename}'. Key content includes: {content[:200]}..."
+                agent.memory.add_entity_to_long_term("document_knowledge", {filename: summary})
+
+            except Exception as e:
+                return jsonify({"error": f"Failed to process PDF: {e}"}), 400
+        else:
+            # Handle other file types, like .txt
+            content = file.read().decode('utf-8')
+            summary = f"The user uploaded a file named '{filename}'. Key content includes: {content[:200]}..."
+            agent.memory.add_entity_to_long_term("document_knowledge", {filename: summary})
+
+    elif text_data:
+        knowledge_source = "direct text"
+        summary = f"The user provided text data. Key content includes: {text_data[:200]}..."
+        agent.memory.add_entity_to_long_term("text_knowledge", {"user_text_feed": summary})
+
+    else:
+        return jsonify({"error": "No text or file provided."}), 400
+
+    return jsonify({"status": "success", "message": f"Knowledge from {knowledge_source} has been fed to the agent."})
 
 # --- Advanced Feature Routes ---
 

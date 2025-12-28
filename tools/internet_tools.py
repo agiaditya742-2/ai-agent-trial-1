@@ -1,105 +1,111 @@
 # tools/internet_tools.py
 
 """
-Provides tools for interacting with the live internet.
-
-This module contains simulated functions for web searches and reading website content.
-In a real-world scenario, these would be replaced with actual API calls
-to a search engine and a web scraper.
+Provides tools for interacting with the live internet, including web searches
+and reading website content.
 """
 
 import json
 import logging
+import requests
+from bs4 import BeautifulSoup
 
 # Configure logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - [%(levelname)s] - (InternetTools) - %(message)s')
 
-def search_web(query: str):
+def search_web(query: str, api_key: str = None, search_engine_id: str = None):
     """
-    Simulates a web search for a given query.
-
-    In a real implementation, this would use an API like Google Search, Bing, etc.
-    For this simulation, it returns a predefined JSON structure with dummy results.
+    Performs a web search using the Google Custom Search JSON API.
 
     Args:
         query (str): The search query.
+        api_key (str): The Google API key.
+        search_engine_id (str): The Custom Search Engine ID.
 
     Returns:
-        str: A JSON string representing the search results.
+        str: A JSON string of search results, or an error message.
     """
-    logging.info(f"Simulating web search for: '{query}'")
-    # Simulate a search result structure
-    dummy_results = {
-        "results": [
-            {
-                "title": f"What is '{query}'? - Explained",
-                "url": f"https://example.com/what-is-{query.replace(' ', '_')}",
-                "snippet": f"A detailed explanation of {query}, its uses, and its history."
-            },
-            {
-                "title": f"How to use '{query}' effectively",
-                "url": f"https://example.com/how-to-use-{query.replace(' ', '_')}",
-                "snippet": f"A guide on the best practices for using {query} in various scenarios."
-            },
-            {
-                "title": f"Related to '{query}'",
-                "url": f"https://example.com/related-to-{query.replace(' ', '_')}",
-                "snippet": f"Other topics and tools related to {query}."
-            }
-        ],
-        "search_provider": "Simulated Search Inc."
+    if not api_key or not search_engine_id:
+        logging.warning("API key or Search Engine ID is not set. Using simulated search.")
+        return json.dumps({
+            "results": [{"title": "Simulated Search Result", "url": "https://example.com", "snippet": "This is a placeholder result."}],
+            "provider": "Simulation"
+        }, indent=2)
+
+    url = "https://www.googleapis.com/customsearch/v1"
+    params = {
+        'q': query,
+        'key': api_key,
+        'cx': search_engine_id,
+        'num': 5  # Request top 5 results
     }
-    return json.dumps(dummy_results, indent=2)
 
-def read_website_content(url: str):
+    try:
+        response = requests.get(url, params=params)
+        response.raise_for_status()  # Raise an exception for bad status codes
+        results = response.json().get('items', [])
+
+        # Format the results for the agent
+        formatted_results = [
+            {"title": item.get('title'), "url": item.get('link'), "snippet": item.get('snippet')}
+            for item in results
+        ]
+        return json.dumps({"results": formatted_results, "provider": "Google"}, indent=2)
+
+    except requests.exceptions.RequestException as e:
+        logging.error(f"Error during web search: {e}")
+        return f"Error: Could not perform web search. Details: {e}"
+
+def read_website_content(url: str) -> str:
     """
-    Simulates reading the content of a given URL.
-
-    In a real implementation, this would involve fetching the URL, parsing the HTML,
-    and extracting the main text content. We must be mindful of legal and ethical
-    considerations like terms of service and robots.txt.
+    Reads the main text content from a given URL.
 
     Args:
         url (str): The URL of the website to read.
 
     Returns:
-        str: The simulated text content of the website.
+        str: The extracted text content, or an error message.
     """
-    logging.info(f"Simulating reading content from URL: {url}")
-    # Simulate website content based on the URL structure
-    if "what-is" in url:
-        topic = url.split("what-is-")[-1].replace('_', ' ')
-        content = f"This is a comprehensive article about {topic}. It covers its definition, history, and applications. In summary, {topic} is a crucial concept in modern technology."
-    elif "how-to-use" in url:
-        topic = url.split("how-to-use-")[-1].replace('_', ' ')
-        content = f"User guide for {topic}. Step 1: Understand the basics. Step 2: Follow the instructions carefully. Step 3: Practice regularly to master {topic}."
-    else:
-        content = "This is a generic article from example.com. The content is for demonstration purposes and does not contain real information."
+    logging.info(f"Fetching content from URL: {url}")
+    try:
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+        }
+        response = requests.get(url, headers=headers, timeout=10)
+        response.raise_for_status()
 
-    return content
+        # Use BeautifulSoup to parse the HTML and extract text
+        soup = BeautifulSoup(response.text, 'html.parser')
+
+        # Remove script and style elements
+        for script_or_style in soup(['script', 'style']):
+            script_or_style.decompose()
+
+        # Get text and clean it up
+        text = soup.get_text()
+        lines = (line.strip() for line in text.splitlines())
+        chunks = (phrase.strip() for line in lines for phrase in line.split("  "))
+        text = '\n'.join(chunk for chunk in chunks if chunk)
+
+        # Truncate for brevity in agent's context
+        return text[:2000] + "..." if len(text) > 2000 else text
+
+    except requests.exceptions.RequestException as e:
+        logging.error(f"Error reading website content from {url}: {e}")
+        return f"Error: Could not read website content. Details: {e}"
 
 if __name__ == '__main__':
-    print("--- Testing Internet Tools ---")
+    print("--- Testing Live Internet Tools ---")
 
-    # Test case 1: Search for 'AI agents'
-    print("\n[Test Case 1: Search Web]")
-    search_query = "AI agents"
-    search_results_json = search_web(search_query)
-    print(f"Search results for '{search_query}':")
-    print(search_results_json)
+    # Test Case 1: Search (will use simulation as no key is provided)
+    print("\n[1] Testing Web Search (Simulated)")
+    search_results = search_web("What is artificial intelligence?")
+    print(search_results)
 
-    # Test case 2: Read content from a simulated URL
-    print("\n[Test Case 2: Read Website Content]")
-    # First, get a URL from the search results
-    search_results = json.loads(search_results_json)
-    if search_results["results"]:
-        sample_url = search_results["results"][0]["url"]
-        print(f"Reading content from URL: {sample_url}")
-        website_content = read_website_content(sample_url)
-        print("--- Website Content ---")
-        print(website_content)
-        print("-----------------------")
-    else:
-        print("No search results found to test website reading.")
+    # Test Case 2: Read Website Content
+    print("\n[2] Testing Website Reading")
+    # Using a reliable and simple website for the test
+    content = read_website_content("http://info.cern.ch/hypertext/WWW/TheProject.html")
+    print(f"Content from CERN website:\n---\n{content[:300]}...\n---")
 
     print("\n--- Internet Tools Test Complete ---")
