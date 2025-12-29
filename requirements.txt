@@ -1,7 +1,2 @@
 Flask
-Flask-Cors
-openai
 PyYAML
-requests
-beautifulsoup4
-PyPDF2

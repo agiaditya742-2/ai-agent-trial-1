@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Agent - Beast Mode</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: #121212;
+            color: #e0e0e0;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+        #left-panel {
+            width: 250px;
+            background-color: #1e1e1e;
+            padding: 20px;
+            border-right: 1px solid #333;
+            display: flex;
+            flex-direction: column;
+        }
+        #left-panel h2 {
+            text-align: center;
+            color: #00aaff;
+            margin-top: 0;
+        }
+        #file-upload-section {
+            margin-top: 20px;
+        }
+        #file-upload-section h3 {
+            font-size: 1em;
+            color: #bbb;
+        }
+        #main-content {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+        #chat-window {
+            flex-grow: 1;
+            padding: 20px;
+            overflow-y: auto;
+            border-bottom: 1px solid #333;
+        }
+        .message {
+            margin-bottom: 15px;
+            line-height: 1.6;
+        }
+        .user-message {
+            text-align: right;
+        }
+        .user-message .message-content {
+            background-color: #005580;
+            color: white;
+            padding: 10px 15px;
+            border-radius: 18px 18px 5px 18px;
+            display: inline-block;
+            max-width: 70%;
+        }
+        .agent-message .message-content {
+            background-color: #333;
+            padding: 10px 15px;
+            border-radius: 18px 18px 18px 5px;
+            display: inline-block;
+            max-width: 70%;
+        }
+        #input-area {
+            display: flex;
+            padding: 20px;
+        }
+        #chat-input {
+            flex-grow: 1;
+            background-color: #2c2c2c;
+            border: 1px solid #444;
+            border-radius: 20px;
+            padding: 10px 15px;
+            color: #e0e0e0;
+            font-size: 1em;
+        }
+        #send-button {
+            background-color: #00aaff;
+            color: white;
+            border: none;
+            border-radius: 20px;
+            padding: 10px 20px;
+            margin-left: 10px;
+            cursor: pointer;
+            font-size: 1em;
+        }
+    </style>
+</head>
+<body>
+    <div id="left-panel">
+        <h2>Agent Controls</h2>
+        <div id="file-upload-section">
+            <h3>Upload Data</h3>
+            <input type="file" id="file-input">
+            <button id="upload-button">Upload</button>
+        </div>
+    </div>
+    <div id="main-content">
+        <div id="chat-window">
+            <!-- Messages will be appended here -->
+        </div>
+        <div id="input-area">
+            <input type="text" id="chat-input" placeholder="Type your message...">
+            <button id="send-button">Send</button>
+        </div>
+    </div>
+    <script src="/static/js/main.js"></script>
+</body>
+</html>
